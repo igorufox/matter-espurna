@@ -18,8 +18,8 @@
 #                               app-common/zap-generated/cluster-enums.h ...)
 #     nlassert, nlio            the two header libraries of connectedhomeip's third_party
 #     gen                       the build configuration headers GN wrote (gen/include of the build)
-#     gn                        app/*.h (the project config) and, bk7231n, external_platform/BK7231N/*.h of this
-#                               repository (the ESP32 platform headers are connectedhomeip's own, in src)
+#     gn                        app/*.h (the project config), platform/ble/*.h (the BLE manager) and, bk7231n,
+#                               external_platform/BK7231N/*.h of this repository
 #   include/chip/flags.txt      "-I<root>" lines (relative to include/chip) and the "-D" defines of the library's code
 #
 # ESPurna's code on the Matter API (the identity of the board, matter_identity.cpp of the fork: one code with the
@@ -98,6 +98,9 @@ def main(target, m, chip, out, lib, pkg, archive=None):
 
     gn = os.path.join(headers, "gn")
     copy_headers(os.path.join(m, "gn", "app"), os.path.join(gn, "app"))
+    # the BLE manager of the library (EXTERNAL_BLEMANAGERIMPL_HEADER <platform/ble/BLEManagerImpl.h> of both chips):
+    # the firmware's matter module includes it through CHIPDeviceBuildConfig.h (20.11: missing, the module did not build)
+    copy_headers(os.path.join(m, "gn", "platform"), os.path.join(gn, "platform"))
     if target == "esp32":
         chip_config(chip, os.path.join(m, "gn", "third_party", "esp32-config", "sdkconfig.h"),
                     os.path.join(gn, "app", "matter_chip_config.h"))
