@@ -1,11 +1,21 @@
+# mbedTLS 3.6.6 for the BK7231N library: headers only. The library carries no mbedTLS of its own; the firmware links
+# the one mbedTLS 3.6.6 it has (its objects, built from the same version), configured so that it has everything this
+# config asks for with the same layout of the contexts the library shares with it. What exactly is checked:
+# app/matter_requirements.h and the generated app/matter_abi.h (include/chip/gn/app of the release package).
+#
+# //third_party/mbedtls = the mbedTLS 3.6.6 tree (include/; igorufox/mbedtls 3.6.6-espurna.1, the framework-mbedtls
+# package), a link made by tools/ci_build.sh / tools/build.sh.
+# (The ESP32 library takes the mbedTLS of its ESP-IDF instead: //mbedtls_idf.)
 import("//build_overrides/chip.gni")
-import("${chip_root}/third_party/mbedtls/mbedtls.gni")
 
-config("bk7231n_mbedtls_config") {
-  include_dirs = [ "." ]
-  defines = [ "MBEDTLS_CONFIG_FILE=\"bk7231n-mbedtls-config.h\"" ]
+config("mbedtls_config") {
+  include_dirs = [
+    ".",
+    "//third_party/mbedtls/include",
+  ]
+  defines = [ "MBEDTLS_CONFIG_FILE=\"matter-mbedtls-config.h\"" ]
 }
 
-mbedtls_target("mbedtls") {
-  public_configs = [ ":bk7231n_mbedtls_config" ]
+group("mbedtls") {
+  public_configs = [ ":mbedtls_config" ]
 }

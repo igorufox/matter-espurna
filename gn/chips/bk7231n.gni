@@ -1,11 +1,11 @@
-# Build arguments of the BK7231N library (ARM968E-S, ARMv5TE, Thumb, BDK 3.0.33 / LibreTiny 1.14): gn gen
+# Build arguments of the BK7231N library (ARM968E-S, ARMv5TE, Thumb; FreeRTOS 11, lwIP 2.2.0, mbedTLS 3.6): gn gen
 # --args='import("//chips/bk7231n.gni")' (ref. //.gn)
 import("//build_overrides/chip.gni")
-import("//bdk/bdk_flags.gni")
+import("//chips/bk7231n_sdk.gni")
 
 custom_toolchain = "//toolchain:bk7231n"
 
-# CPU: same as LibreTiny for BK7231N (-mcpu=arm968e-s -march=armv5te -mthumb -mthumb-interwork)
+# CPU: the BK7231N (-mcpu=arm968e-s -march=armv5te -mthumb -mthumb-interwork)
 arm_arch = "armv5te"
 arm_cpu = "arm968e-s"
 arm_float_abi = "soft"
@@ -23,7 +23,7 @@ target_cflags = [
                   "-fsigned-char",
                   "-ffunction-sections",
                   "-fdata-sections",
-                ] + bdk_defines + bdk_include_flags
+                ] + bk_sdk_defines + bk_sdk_include_flags
 target_cflags_c = []
 target_cflags_cc = [
   "-fno-rtti",
@@ -43,7 +43,7 @@ chip_device_project_config_include = "<app/ProjectConfig.h>"
 chip_system_project_config_include = ""
 chip_ble_project_config_include = ""
 
-# lwIP 2.2.0 and FreeRTOS of LibreTiny (headers through target_cflags), mbedTLS 2.28 of the SDK (BDK has 2.6.0)
+# lwIP 2.2.0 and FreeRTOS 11 (headers through target_cflags, chips/bk7231n_sdk.gni), mbedTLS 3.6 headers (//mbedtls)
 lwip_platform = "external"
 chip_system_config_use_lwip = true
 chip_system_config_use_sockets = false
@@ -53,11 +53,12 @@ chip_build_tests = false
 chip_build_libshell = false
 chip_config_enable_arg_parser = false
 
-# Wi-Fi only, on-network commissioning, no BLE / Thread
+# Wi-Fi; commissioning on the network, and over BLE when the firmware attaches its BLE stack (app/matter_ble.h,
+# platform/ble/BLEManagerImpl: no stack in the library); no Thread
 chip_enable_wifi = true
 chip_enable_openthread = false
-chip_config_network_layer_ble = false
-chip_enable_ble = false
+chip_config_network_layer_ble = true
+chip_enable_ble = true
 chip_enable_additional_data_advertising = false
 chip_enable_rotating_device_id = false
 

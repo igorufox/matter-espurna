@@ -37,14 +37,18 @@ ClockImpl gClockImpl;
 
 Clock::Milliseconds64 baseTime;
 
+// the tick of the firmware's FreeRTOS config (the BDK's was 2 ms: `<< 1` before), checked by matter_abi.h
+static_assert((1000 % configTICK_RATE_HZ) == 0, "the tick has to be a whole number of milliseconds");
+constexpr uint64_t kTickMs = 1000 / configTICK_RATE_HZ;
+
 Microseconds64 ClockImpl::GetMonotonicMicroseconds64(void)
 {
-    return (Clock::Microseconds64(xTaskGetTickCount() << 1) * kMicrosecondsPerMillisecond);
+    return (Clock::Microseconds64(static_cast<uint64_t>(xTaskGetTickCount()) * kTickMs) * kMicrosecondsPerMillisecond);
 }
 
 Milliseconds64 ClockImpl::GetMonotonicMilliseconds64(void)
 {
-    return (Clock::Milliseconds64(xTaskGetTickCount() << 1));
+    return (Clock::Milliseconds64(static_cast<uint64_t>(xTaskGetTickCount()) * kTickMs));
 }
 
 CHIP_ERROR ClockImpl::GetClock_RealTime(Clock::Microseconds64 & curTime)

@@ -1,0 +1,46 @@
+# ESP-IDF configuration of the ESP32 Matter library: ESP-IDF's defaults, and what Matter needs on top of them.
+# Options that change the layout of what the library shares with the firmware (FreeRTOS, lwIP, mbedTLS) end up in
+# matter_abi.h of the release package; the firmware's own config has to give the same.
+
+# FreeRTOS 11: ESP-IDF's FreeRTOS-Kernel-SMP (V11.1.0), 1 ms tick
+CONFIG_FREERTOS_SMP=y
+CONFIG_FREERTOS_HZ=1000
+
+# Wi-Fi only: no Bluetooth (on-network commissioning)
+CONFIG_BT_ENABLED=n
+
+# IPv6 with SLAAC addresses, MLD reports (operational discovery and mDNS over IPv6)
+CONFIG_LWIP_IPV6=y
+CONFIG_LWIP_IPV6_AUTOCONFIG=y
+CONFIG_LWIP_ESP_MLDV6_REPORT=y
+
+# mbedTLS: HKDF (session keys, PASE / CASE); the rest Matter calls is on by default
+CONFIG_MBEDTLS_HKDF_C=y
+CONFIG_MBEDTLS_ECDSA_DETERMINISTIC=y
+CONFIG_MBEDTLS_CCM_C=y
+
+# The layout of what the library shares with the firmware (matter_abi.h): the FreeRTOS objects with the trace facility
+# and run time stats, struct netif with 8 IPv6 addresses, DHCPv6, NAPT and PPP (ESPurna's ESP32 configuration has them)
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+CONFIG_FREERTOS_RUN_TIME_STATS_USING_ESP_TIMER=y
+CONFIG_LWIP_IPV6_NUM_ADDRESSES=8
+CONFIG_LWIP_IPV6_DHCP6=y
+CONFIG_LWIP_IP_FORWARD=y
+CONFIG_LWIP_IPV4_NAPT=y
+# PPP: esp-netif keeps its pointer in a client data slot of every netif then (LWIP_ESP_NETIF_DATA)
+CONFIG_LWIP_PPP_SUPPORT=y
+
+# lwIP calls of the library under the core lock (LOCK_TCPIP_CORE() expands in its code), with the lock checks
+CONFIG_LWIP_TCPIP_CORE_LOCKING=y
+CONFIG_LWIP_CHECK_THREAD_SAFETY=y
+
+# connectedhomeip's ESP32 component (gn/esp32/components/chip_config): its platform config defines these from
+# CONFIG_* after the project config, so they are set to the values of gn/app/ProjectConfig.h, the application's one
+# config on both chips (with esp_matter's values before, ESP32 ran 8 exchanges and 1 KB / 256 / 256 event logs)
+CONFIG_MAX_EXCHANGE_CONTEXTS=12
+CONFIG_MAX_EVENT_QUEUE_SIZE=64
+CONFIG_CHIP_TASK_STACK_SIZE=8192
+CONFIG_EVENT_LOGGING_CRIT_BUFFER_SIZE=512
+CONFIG_EVENT_LOGGING_INFO_BUFFER_SIZE=256
+CONFIG_EVENT_LOGGING_DEBUG_BUFFER_SIZE=128

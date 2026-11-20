@@ -28,6 +28,10 @@ extern "C" {
 #include "wlan_ui_pub.h"    /* LinkStatusTypeDef, bk_wlan_get_link_status, bk_sta_cipher_type, BK_SECURITY_TYPE_*, bk_reboot */
 #include "net.h"            /* net_get_sta_handle */
 #include "BkDriverFlash.h"  /* bk_flash_get_info, BK_PARTITION_OTA, bk_logic_partition_t */
+/* the BDK's generic.h defines min() / max(): they break std::min / std::max of the C++ library (LibreTiny's fixups
+ * removed them before) */
+#undef min
+#undef max
 
 #define CONFIG_FLASH_ORIGIN_API 1
 

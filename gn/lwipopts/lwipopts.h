@@ -32,7 +32,19 @@
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 
-#include "sys_config.h"
+/* The lwIP options the BK7231N library is compiled with (lwIP 2.2.0 of the BDK port): the library's own, no header of
+ * the BDK. What came from its sys_config.h is written out: the BK7231N's memory policy (sys_config_bk7231n.h,
+ * LWIP_REDUCE_THE_PLAN) and IPv6 (CONFIG_IPV6, Matter needs it); no AUTOIP. The firmware keeps lwipopts of its own,
+ * matter_requirements.h of the package checks what the library needs of them */
+#ifndef LWIP_REDUCE_THE_PLAN
+#define LWIP_REDUCE_THE_PLAN 2
+#endif
+#ifndef CFG_LWIP_MEM_POLICY
+#define CFG_LWIP_MEM_POLICY LWIP_REDUCE_THE_PLAN
+#endif
+#ifndef CONFIG_IPV6
+#define CONFIG_IPV6 1
+#endif
 
 /**
  * Loopback demo related options.
@@ -502,3 +514,8 @@ The STM32F107 allows computing and verifying the IP, UDP, TCP and ICMP checksums
  * buffers, the heap a pairing needs) */
 #undef PBUF_POOL_SIZE
 #define PBUF_POOL_SIZE 10
+
+/* The layout of struct netif the library is compiled with (matter_abi.h of the package checks the firmware's): two
+ * slots of client data - the firmware's mDNS responder and DHCP / ACD take them (ESPurna's Beken lwipopts) */
+#undef LWIP_NUM_NETIF_CLIENT_DATA
+#define LWIP_NUM_NETIF_CLIENT_DATA 2

@@ -12,7 +12,6 @@ on:
     branches: [main]
     paths:
       - "gn/**"
-      - "lwip-override/**"
       - "tools/**"
       - ".github/workflows/release.yml"
   workflow_dispatch:
@@ -41,7 +40,7 @@ jobs:
           sudo apt-get install -y -q generate-ninja
           gn --version
 
-      # connectedhomeip + submodules, LibreTiny / BDK headers, the gccs, the ESP-IDF of Arduino-ESP32, zap-cli, Python venv (pins in tools/ci_build.sh;
+      # connectedhomeip + submodules, the SDK headers of the BK7231N, Mbed TLS, ESP-IDF and its tools, zap-cli, Python venv (pins in tools/ci_build.sh;
       # an older cache is reused, ci_build.sh replaces whatever does not match the pins)
       - uses: actions/cache@v4
         with:
@@ -69,7 +68,7 @@ jobs:
             echo
             echo "- connectedhomeip ${chip}"
             echo "- BK7231N: ${gcc_bk}"
-            echo "- ESP32: ${gcc_esp32}, the ESP-IDF of Arduino-ESP32 3.3.12"
+            echo "- ESP32: ${gcc_esp32}, stock ESP-IDF $(git -C ~/deps/esp-idf describe --tags 2>/dev/null || echo v5.5.5) (gn/esp32/sdkconfig.defaults)"
             for target in bk7231n esp32; do
               read -r sha _ < ~/out/matter-espurna-${target}.zip.sha256
               size=$(stat -c %s ~/out/pkg-${target}/lib/libMatterApp.a)

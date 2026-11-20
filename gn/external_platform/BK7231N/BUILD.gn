@@ -1,4 +1,5 @@
-# BK7231N platform layer: copy of connectedhomeip v1.4.2.0 src/platform/Beken (ARMINO) without BLE,
+# BK7231N platform layer: copy of connectedhomeip v1.4.2.0 src/platform/Beken (ARMINO); BLE: the common
+# platform/ble/BLEManagerImpl on the firmware's stack,
 # vendor calls go through matter_pal.h (BDK 3.0.33 + the ARMINO API to port, bk7231n_port.c).
 import("//build_overrides/chip.gni")
 
@@ -27,7 +28,7 @@ buildconfig_header("custom_buildconfig") {
     "CHIP_USE_TRANSITIONAL_COMMISSIONABLE_DATA_PROVIDER=1",
     "CHIP_USE_TRANSITIONAL_DEVICE_INSTANCE_INFO_PROVIDER=1",
     "CHIP_DEVICE_CONFIG_ENABLE_WIFI=1",
-    "CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE=0",
+    "CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE=1",
     "BLE_PLATFORM_CONFIG_INCLUDE=<${_p}/BlePlatformConfig.h>",
     "CHIP_DEVICE_PLATFORM_CONFIG_INCLUDE=<${_p}/CHIPDevicePlatformConfig.h>",
     "CHIP_PLATFORM_CONFIG_INCLUDE=<${_p}/CHIPPlatformConfig.h>",
@@ -36,7 +37,7 @@ buildconfig_header("custom_buildconfig") {
     "EXTERNAL_CONFIGURATIONMANAGERIMPL_HEADER=<${_p}/ConfigurationManagerImpl.h>",
     "EXTERNAL_CHIPDEVICEPLATFORMEVENT_HEADER=<${_p}/CHIPDevicePlatformEvent.h>",
     "EXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=<${_p}/ConnectivityManagerImpl.h>",
-    "EXTERNAL_BLEMANAGERIMPL_HEADER=<${_p}/BLEManagerImpl.h>",
+    "EXTERNAL_BLEMANAGERIMPL_HEADER=<platform/ble/BLEManagerImpl.h>",
     "EXTERNAL_KEYVALUESTOREMANAGERIMPL_HEADER=<${_p}/KeyValueStoreManagerImpl.h>",
     "EXTERNAL_PLATFORMMANAGERIMPL_HEADER=<${_p}/PlatformManagerImpl.h>",
     "CHIP_DEVICE_CONFIG_MAX_DISCOVERED_IP_ADDRESSES=5",

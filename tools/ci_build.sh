@@ -6,10 +6,10 @@
 #
 # <deps_dir> gets everything the build needs, at the versions pinned below (skipped when already there, so it can be
 # cached): connectedhomeip with the submodules the library uses, a Python venv for the code generators, zap-cli;
-# BK7231N: LibreTiny + the BDK packages it uses (headers only) and the Linux build of the arm-none-eabi gcc LibreTiny
-# compiles the firmware with (PlatformIO package, PLATFORMIO_CORE_DIR=<deps_dir>/pio);
-# ESP32: the xtensa-esp-elf gcc and the prebuilt ESP-IDF (headers, flags, sdkconfig) of the Arduino-ESP32 release the
-# ESP32 build of ESPurna uses.
+# BK7231N: FreeRTOS-Kernel V11.1.0 with its ARM968 port, lwIP 2.2.0 of the BDK port, the BDK 3.0.33 (headers only, no
+# LibreTiny) and the Linux build of the arm-none-eabi gcc 14.2 (PlatformIO package, PLATFORMIO_CORE_DIR=<deps_dir>/pio);
+# ESP32: stock ESP-IDF (its tools: the xtensa-esp-elf gcc, cmake, ninja, its Python env), the library's ESP-IDF project
+# gn/esp32 configured with it (sdkconfig.defaults of the library); mbedTLS 3.6 (BK7231N: headers of Mbed TLS).
 # <out_dir> gets the ninja builds (build-<chip>/) and a package per chip:
 #   matter-espurna-<chip>.zip         lib/libMatterApp.a (debug info stripped), the headers of the library's API with
 #                                     their flags (include/chip), bk7231n also include/lwipopts.h (tools/package.py)
@@ -35,26 +35,36 @@ ZAP_VERSION=v2025.10.23-nightly          # scripts/setup/zap.version of that com
 # (ESPurna libraries.ini beken_toolchain, U25): one compiler for the firmware and this library
 GCC_PACKAGE=platformio/toolchain-gccarmnoneeabi@1.140201.0
 GCC_VERSION=14.2.1
-# ESP32: the gcc and the prebuilt ESP-IDF 5.5 of Arduino-ESP32 3.3.12 (pioarduino platform 55.03.312 of ESPurna's
-# libraries.ini: framework-arduinoespressif32-libs, toolchain-xtensa-esp-elf 14.2.0+20260121)
-ESP32_GCC_URL=https://github.com/espressif/crosstool-NG/releases/download/esp-14.2.0_20260121/xtensa-esp-elf-14.2.0_20260121-x86_64-linux-gnu.tar.xz
+# ESP32: stock ESP-IDF v5.5.5 (FreeRTOS-Kernel-SMP V11.1.0, esp-lwip 2.2.0, mbedTLS 3.6), its own gcc 14.2
+IDF_URL=https://github.com/espressif/esp-idf
+IDF_TAG=v5.5.5
+IDF_COMMIT=ff1bac0aeecdd2b797b9c3a558c6bd03629bc013
 ESP32_GCC_VERSION=14.2.0
-ESP32_LIBS_URL=https://github.com/espressif/arduino-esp32/releases/download/3.3.12/esp32-core-3.3.12-libs.tar.xz
-# LibreTiny 1.14.0 and its BK7231N packages: <path under pio home> <repository> <commit> (tag)
-LT_REPOS=(
-    "platforms/libretiny            https://github.com/libretiny-eu/libretiny             c81bc9cef83ffd42fcffce32b8b08793b2400b9f" # v1.14.0
-    "packages/framework-beken-bdk   https://github.com/libretiny-eu/framework-beken-bdk   841343e64d7584a3a650222ab0b6ea967755352a" # 3.0.33
-    "packages/library-freertos      https://github.com/libretiny-eu/library-freertos      dd0b977a86ea18594167c4dfeb775ea98bfe59e4" # 9.0.0
-    "packages/library-freertos-port https://github.com/libretiny-eu/library-freertos-port 91a88be92c5b0d8a36922063ca5ed6850193a115" # 2026.02.04
-    "packages/library-lwip          https://github.com/libretiny-eu/lwip                  0d1cedf257bf58ac7c12fb7b79ec79daf2a006bd" # 2.2.0-bdk
-)
+# BK7231N: the headers of mbedTLS 3.6.6, the one tree of every chip (Espressif's 3.6.6 that ESP-IDF v5.5.5 takes, the
+# framework-mbedtls package of ESPurna); the library carries no mbedTLS: the firmware links its own 3.6, checked by
+# matter_requirements.h of the package
+MBEDTLS_URL=https://github.com/igorufox/mbedtls
+MBEDTLS_COMMIT=b3b5f67d252dcb83bafab82ddc3b280c030fc6d5   # 3.6.6-espurna.1
+# BK7231N: the FreeRTOS kernel package with the ARM968 port and FreeRTOSConfig.h of the BK7231N (the one kernel source
+# of the firmware and the library), lwIP 2.2.0 of the BDK port (port/arch: cc.h, sys_arch.h)
+FREERTOS_URL=https://github.com/igorufox/FreeRTOS-Kernel
+FREERTOS_COMMIT=c101968b46bb42e1845e26cc14bc2cebd9c64513   # 11.1.0-espurna.2: V11.1.0 + portable/GCC/ARM968 (configUSE_MINI_LIST_ITEM 0)
+# BDK 3.0.33 of the BK7231N (headers of its API only)
+BDK_URL=https://github.com/libretiny-eu/framework-beken-bdk
+BDK_COMMIT=841343e64d7584a3a650222ab0b6ea967755352a    # 3.0.33
+LWIP_URL=https://github.com/libretiny-eu/lwip
+LWIP_COMMIT=0d1cedf257bf58ac7c12fb7b79ec79daf2a006bd   # 2.2.0-bdk
 
 CHIP=$DEPS/connectedhomeip
 PIO=$DEPS/pio
+FREERTOS=$DEPS/freertos-kernel
+LWIP=$DEPS/lwip
+BDK=$DEPS/bdk
 VENV=$DEPS/venv
 ZAP=$DEPS/zap-$ZAP_VERSION
-ESP32_GCC=$DEPS/xtensa-esp-elf
-ESP32_LIBS=$DEPS/esp32-libs
+IDF=$DEPS/esp-idf
+IDF_TOOLS=$DEPS/espressif
+MBEDTLS=$DEPS/mbedtls
 
 # shallow checkout of one commit; .ci-commit marks a finished one
 checkout() {   # <dir> <url> <commit>
@@ -77,10 +87,9 @@ if [ ! -f "$CHIP/.ci-submodules" ]; then
     touch "$CHIP/.ci-submodules"
 fi
 
-for repo in "${LT_REPOS[@]}"; do
-    read -r path url commit <<< "$repo"
-    checkout "$PIO/$path" "$url" "$commit"
-done
+checkout "$FREERTOS" "$FREERTOS_URL" "$FREERTOS_COMMIT"
+checkout "$LWIP" "$LWIP_URL" "$LWIP_COMMIT"
+checkout "$BDK" "$BDK_URL" "$BDK_COMMIT"
 
 if [ ! -f "$VENV/.ci-done" ]; then
     echo "== Python venv"
@@ -125,22 +134,47 @@ fetch_tar() {   # <dir> <url>
     echo "$2" > "$1/.ci-url"
 }
 
-fetch_tar "$ESP32_GCC" "$ESP32_GCC_URL"
-ESP32_BIN=$(dirname "$(find "$ESP32_GCC" -path "*/bin/xtensa-esp32-elf-gcc" | head -1)")
+checkout "$MBEDTLS" "$MBEDTLS_URL" "$MBEDTLS_COMMIT"
+
+# ESP-IDF with the submodules its configure needs (mbedtls, lwip; the Wi-Fi / PHY blobs are not linked here), its
+# tools for esp32 (gcc, cmake, ninja, the Python env)
+checkout "$IDF" "$IDF_URL" "$IDF_COMMIT"
+if [ ! -f "$IDF/.ci-submodules" ]; then
+    git -C "$IDF" submodule update -q --init --depth 1 -- components/mbedtls/mbedtls components/lwip/lwip \
+        components/esp_wifi/lib components/esp_phy/lib components/esp_coex/lib components/bootloader/subproject/components/micro-ecc/micro-ecc
+    touch "$IDF/.ci-submodules"
+fi
+if [ ! -f "$IDF_TOOLS/.ci-$IDF_COMMIT" ]; then
+    echo "== ESP-IDF $IDF_TAG tools"
+    IDF_TOOLS_PATH=$IDF_TOOLS "$IDF/install.sh" esp32
+    touch "$IDF_TOOLS/.ci-$IDF_COMMIT"
+fi
+(
+    export IDF_TOOLS_PATH=$IDF_TOOLS
+    # the Kconfig of connectedhomeip's ESP32 component (gn/esp32/components/chip_config)
+    export CHIP_ROOT=$CHIP
+    # shellcheck disable=SC1091
+    . "$IDF/export.sh" > /dev/null
+    echo "== ESP-IDF project gn/esp32 (the library's sdkconfig.defaults)"
+    rm -rf "$OUT/esp32-idf"
+    idf.py -C "$M/gn/esp32" -B "$OUT/esp32-idf" -DSDKCONFIG="$OUT/esp32-idf/sdkconfig" \
+        -DSDKCONFIG_DEFAULTS="$M/gn/esp32/sdkconfig.defaults" set-target esp32
+    idf.py -C "$M/gn/esp32" -B "$OUT/esp32-idf" -DSDKCONFIG="$OUT/esp32-idf/sdkconfig" \
+        -DSDKCONFIG_DEFAULTS="$M/gn/esp32/sdkconfig.defaults" reconfigure
+    echo "$(dirname "$(command -v xtensa-esp32-elf-gcc)")" > "$OUT/esp32-idf/gcc-bin"
+)
+ESP32_BIN=$(cat "$OUT/esp32-idf/gcc-bin")
 "$ESP32_BIN/xtensa-esp32-elf-gcc" --version | head -1 | grep -q " $ESP32_GCC_VERSION" || {
     echo "xtensa-esp32-elf-gcc is not $ESP32_GCC_VERSION:"; "$ESP32_BIN/xtensa-esp32-elf-gcc" --version | head -1; exit 1; }
-
-# <libs>/esp32 with flags/, include/ and dio_qspi/include/sdkconfig.h
-fetch_tar "$ESP32_LIBS" "$ESP32_LIBS_URL"
-ESP32_SDK=$(dirname "$(dirname "$(find "$ESP32_LIBS" -path "*/esp32/flags/includes" | head -1)")")
-[ -f "$ESP32_SDK/dio_qspi/include/sdkconfig.h" ] || { echo "no esp32/dio_qspi/include/sdkconfig.h in $ESP32_LIBS_URL"; exit 1; }
 
 command -v gn > /dev/null || { echo "gn is not on PATH (Ubuntu: apt install generate-ninja)"; exit 1; }
 
 # the GN root finds connectedhomeip and the PlatformIO packages through these links (tools/build.sh makes NTFS
 # junctions instead, for the Windows gcc)
 mkdir -p "$M/gn/third_party"
-for link in "connectedhomeip:$CHIP" "pio:$PIO" "esp32-toolchain:$(dirname "$ESP32_BIN")" "esp32-libs:$ESP32_SDK"; do
+for link in "connectedhomeip:$CHIP" "pio:$PIO" "freertos-kernel:$FREERTOS" "lwip:$LWIP" "bdk:$BDK" \
+            "esp32-toolchain:$(dirname "$ESP32_BIN")" "esp-idf:$IDF" \
+            "esp32-config:$OUT/esp32-idf/config" "mbedtls:$MBEDTLS"; do
     name=${link%%:*}
     target=${link#*:}
     rm -rf "${M:?}/gn/third_party/$name"
@@ -151,8 +185,8 @@ mkdir -p "$CHIP/examples/espurna-plug"
 cp "$M/gn/chip-examples/espurna-plug/BUILD.gn" "$CHIP/examples/espurna-plug/BUILD.gn"
 # the DNS-SD of the ESP32 platform goes, the library's own takes its place (tools/chip_patch.py)
 python3 "$M/tools/chip_patch.py" "$CHIP"
-# the flags of the prebuilt ESP-IDF for the ESP32 build
-python3 "$M/tools/gen_esp32_flags.py" "$ESP32_SDK" "$M/gn/chips/esp32_flags.gni"
+# the flags ESP-IDF gives a component of gn/esp32, for the ESP32 build
+python3 "$M/tools/gen_esp32_flags.py" "$IDF" "$OUT/esp32-idf" "$M/gn/chips/esp32_flags.gni"
 
 # shellcheck disable=SC1091
 . "$VENV/bin/activate"
@@ -165,7 +199,7 @@ echo "== build: connectedhomeip $(git -C "$CHIP" log -1 --format='%h %ad' --date
      "gn $(gn --version), ninja $(ninja --version)"
 cd "$M/gn"
 
-# one chip: <chip> <gn args> <strip>
+# one chip: <chip> <gn args> <strip> <nm>
 build() {
     echo "== build $1"
     # no include check (`--check`, any value of it turns it on): connectedhomeip's ESP32 platform includes headers of
@@ -174,6 +208,7 @@ build() {
     ninja -j "$JOBS" -C "$OUT/build-$1" default
 
     echo "== package $1"
+    export NM="$4"
     "$3" --strip-debug -o "$OUT/libMatterApp-$1.stripped.a" "$OUT/build-$1/lib/libMatterApp.a"
     python3 "$M/tools/package.py" "$1" "$M" "$CHIP" "$OUT/build-$1" "$OUT/libMatterApp-$1.stripped.a" "$OUT/pkg-$1" \
         "$OUT/matter-espurna-$1.zip"
@@ -182,5 +217,5 @@ build() {
     cat "$OUT/matter-espurna-$1.zip.sha256"
 }
 
-build bk7231n 'import("//chips/bk7231n.gni") bk_toolchain="native"' "$GCC_BIN/arm-none-eabi-strip"
-build esp32 'import("//chips/esp32.gni")' "$ESP32_BIN/xtensa-esp32-elf-strip"
+build bk7231n 'import("//chips/bk7231n.gni") bk_toolchain="native"' "$GCC_BIN/arm-none-eabi-strip" "$GCC_BIN/arm-none-eabi-nm"
+build esp32 'import("//chips/esp32.gni") esp32_toolchain="native"' "$ESP32_BIN/xtensa-esp32-elf-strip" "$ESP32_BIN/xtensa-esp32-elf-nm"

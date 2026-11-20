@@ -1,73 +1,121 @@
 #!/usr/bin/env python3
-# gn/chips/esp32_flags.gni from the prebuilt ESP-IDF of Arduino-ESP32 (the arduino-esp32 "libs" package, the same
-# release as the ESP32 build of ESPurna: its flags/ and include/, the sdkconfig.h of dio_qspi):
+# gn/chips/esp32_flags.gni from the configured ESP-IDF project of the library (gn/esp32, `idf.py reconfigure`):
 #
-#   tools/gen_esp32_flags.py <libs>/esp32 <out .gni>
+#   tools/gen_esp32_flags.py <IDF_PATH> <build dir of gn/esp32> <out .gni>
 #
-# The library is compiled with the flags, include folders and defines ESP-IDF compiled Arduino-ESP32 with, so it sees
-# the SDK (FreeRTOS, lwIP, esp_wifi, NVS, mbedTLS) as ESPurna does. Left out:
-# - the headers of esp_matter and of its own connectedhomeip (and OpenThread): the library builds connectedhomeip
-#   itself, with the plug.zap data model, another configuration than esp_matter's
-# - its CHIP_* defines, -std (connectedhomeip sets the C / C++ standard of its build)
-# The include folders go in as -isystem of //third_party/esp32-libs (a link made by tools/ci_build.sh), in their order.
+# The library is compiled with the include folders, defines and flags stock ESP-IDF gives a component of that project
+# (its sdkconfig.defaults: the library's own configuration), read from <build>/compile_commands.json (main/probe.c for
+# C, main/probe.cpp for C++). Left out: -std (connectedhomeip sets the C / C++ standard of its build), -o / -c / the
+# source, -MD/-MT/-MF, -Werror*, -O / -g and the prefix maps; the @response files of the toolchain flags are read in. The include folders go in as -isystem through two links tools/ci_build.sh makes:
+# //third_party/esp-idf (IDF_PATH) and //third_party/esp32-config (<build>/config, sdkconfig.h).
 
+import json
 import os
 import shlex
 import sys
 
-SKIP_INCLUDE = ("esp_matter", "connectedhomeip", "openthread")
+# GN sets the optimization and the debug info of the build (optimize_for_size, symbol_level); the prefix maps name
+# paths of this machine
+DROP_PREFIX = ("-std=", "-o", "-c", "-MD", "-MT", "-MF", "-MMD", "-Werror", "-fdiagnostics-color", "-O", "-g",
+               "-fmacro-prefix-map", "-ffile-prefix-map", "-fdebug-prefix-map")
 
 
-def tokens(path):
-    with open(path, encoding="utf-8") as f:
-        return shlex.split(f.read())
-
-
-def keep_flag(flag):
-    return not (flag.startswith("-std=") or flag.startswith("-DCHIP_"))
+def norm(path):
+    return os.path.normcase(os.path.realpath(path)).replace("\\", "/")
 
 
 def gn_string(value):
-    # a GN string literal of a flag: GN quotes it for the shell itself (-DIDF_VER="v5.5.5" stays as it is)
     escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$")
     return f'"{escaped}"'
 
 
 def gn_list(name, values):
-    out = [f"{name} = ["]
-    out += [f"  {value}," for value in values]
-    out.append("]")
-    return "\n".join(out)
+    return "\n".join([f"{name} = ["] + [f"  {value}," for value in values] + ["]"])
 
 
-def main(libs, output):
-    flags = os.path.join(libs, "flags")
+def entry(commands, suffix):
+    for item in commands:
+        if item["file"].replace("\\", "/").endswith(suffix):
+            return item
+    raise SystemExit(f"gen_esp32_flags.py: no {suffix} in compile_commands.json")
+
+
+def split(item):
+    args = item["arguments"] if "arguments" in item else shlex.split(item["command"])
+    # @<file>: the toolchain flags ESP-IDF 5.5 keeps in response files (build/toolchain/cflags, cxxflags)
+    expanded = []
+    for arg in args:
+        if arg.startswith("@") and os.path.isfile(arg[1:]):
+            with open(arg[1:], encoding="utf-8") as f:
+                expanded += shlex.split(f.read())
+        else:
+            expanded.append(arg)
+    args = expanded
+    out = []
+    skip = False
+    for index, arg in enumerate(args[1:], 1):
+        if skip:
+            skip = False
+            continue
+        if arg in ("-o", "-MT", "-MF", "-I", "-isystem", "-D", "-include") and index + 1 < len(args):
+            if arg in ("-I", "-isystem", "-D", "-include"):
+                out.append(arg + args[index + 1])
+            skip = True
+            continue
+        if arg == item["file"] or arg.endswith((".c", ".cpp")):
+            continue
+        out.append(arg)
+    return out
+
+
+def main(idf_path, build, output):
+    with open(os.path.join(build, "compile_commands.json"), encoding="utf-8") as f:
+        commands = json.load(f)
+    roots = [
+        (norm(os.path.join(build, "config")), "//third_party/esp32-config"),
+        (norm(idf_path), "//third_party/esp-idf"),
+    ]
+
+    def include(path):
+        # compared without case (Windows), kept with it
+        real = os.path.realpath(path).replace("\\", "/")
+        for root, link in roots:
+            key = norm(real)
+            if key == root or key.startswith(root + "/"):
+                rest = real[len(root):]
+                return f'"-isystem" + rebase_path("{link}{rest}")'
+        raise SystemExit(f"gen_esp32_flags.py: include folder outside ESP-IDF and the config: {path}")
+
+    c_args = split(entry(commands, "main/probe.c"))
+    cc_args = split(entry(commands, "main/probe.cpp"))
 
     includes = []
-    parts = tokens(os.path.join(flags, "includes"))
-    for index, part in enumerate(parts):
-        if part != "-iwithprefixbefore":
-            continue
-        folder = parts[index + 1]
-        if any(skip in folder for skip in SKIP_INCLUDE):
-            continue
-        includes.append(f'"-isystem" + rebase_path("//third_party/esp32-libs/include/{folder}")')
-    # sdkconfig.h of the flash mode of ESPurna's boards (dio, ref. platformio_esp32.ini)
-    includes.append('"-isystem" + rebase_path("//third_party/esp32-libs/dio_qspi/include")')
+    defines = []
+    for arg in c_args:
+        if arg.startswith("-I") or arg.startswith("-isystem"):
+            path = arg[2:] if arg.startswith("-I") else arg[len("-isystem"):]
+            if not path.replace("\\", "/").rstrip("/").endswith("/main"):
+                includes.append(include(path))
+        elif arg.startswith("-D"):
+            defines.append(gn_string(arg))
 
-    defines = [gn_string(flag) for flag in tokens(os.path.join(flags, "defines")) if keep_flag(flag)]
-    c_flags = [gn_string(flag) for flag in tokens(os.path.join(flags, "c_flags")) if keep_flag(flag)]
-    cpp_flags = [gn_string(flag) for flag in tokens(os.path.join(flags, "cpp_flags")) if keep_flag(flag)]
+    def flags(args):
+        return [gn_string(arg) for arg in args
+                if not arg.startswith(("-I", "-isystem", "-D")) and not arg.startswith(DROP_PREFIX)]
+
+    c_flags = flags(c_args)
+    cc_flags = [flag for flag in flags(cc_args) if flag not in c_flags]
+    common = [flag for flag in c_flags if flag in flags(cc_args)]
+    c_only = [flag for flag in c_flags if flag not in common]
 
     text = "\n\n".join([
-        "# generated by tools/gen_esp32_flags.py from the flags of the arduino-esp32 libs package - do not edit\n"
-        "# //third_party/esp32-libs = <libs>/esp32 (a link made by tools/ci_build.sh)",
+        "# generated by tools/gen_esp32_flags.py from the configured ESP-IDF project gn/esp32 - do not edit\n"
+        "# //third_party/esp-idf = IDF_PATH, //third_party/esp32-config = its build/config (links of tools/ci_build.sh)",
         gn_list("esp32_include_flags", includes),
-        gn_list("esp32_defines", defines),
-        gn_list("esp32_cflags_c", c_flags),
-        gn_list("esp32_cflags_cc", cpp_flags),
+        gn_list("esp32_defines", defines + common),
+        gn_list("esp32_cflags_c", c_only),
+        gn_list("esp32_cflags_cc", cc_flags),
     ]) + "\n"
-
     with open(output, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
 

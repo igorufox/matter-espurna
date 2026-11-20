@@ -34,7 +34,8 @@
 #define CHIP_DEVICE_CONFIG_ENABLE_THREAD 1
 #endif
 
-#define CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE 0
+// CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE: CHIPDeviceBuildConfig.h of BUILD.gn (1: platform/ble/BLEManagerImpl on the
+// firmware's BLE stack, app/matter_ble.h)
 
 // ========== Platform-specific Configuration =========
 

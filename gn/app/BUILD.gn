@@ -30,6 +30,10 @@ static_library("MatterApp") {
   }
   # mDNS: ESPurna's one responder publishes Matter's services on both chips (chip_mdns = "platform"; the ESP32
   # platform's DNS-SD on ESP-IDF's mdns is taken out by tools/chip_patch.py)
+  # BLE: one BLEManagerImpl for every chip on the firmware's stack (app/matter_ble.h)
+  if (chip_enable_ble) {
+    sources += [ "../platform/ble/BLEManagerImpl.cpp" ]
+  }
   if (chip_mdns == "platform") {
     sources += [ "../platform/EspurnaDnssd.cpp" ]
     public_deps += [ "${chip_root}/src/lib/dnssd:platform_header" ]
@@ -37,4 +41,15 @@ static_library("MatterApp") {
   output_name = "libMatterApp"
   output_dir = "${root_out_dir}/lib"
   complete_static_lib = true
+}
+
+# The layout of what the library shares with the firmware (FreeRTOS, lwIP, mbedTLS types), compiled with the library's
+# flags: not in libMatterApp.a, tools/abi.py makes matter_abi.h of the release package from this object
+source_set("abi_probe") {
+  sources = [ "matter_abi_probe.c" ]
+  # the SDK headers come with the chip's flags, mbedTLS's with connectedhomeip's crypto (its mbedtls_target)
+  deps = [
+    ":MatterApp",
+    "${chip_root}/src/crypto",
+  ]
 }

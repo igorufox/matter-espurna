@@ -1,0 +1,4 @@
+# The options of connectedhomeip's ESP32 component (its src/platform/ESP32 reads them from sdkconfig.h): its Kconfig,
+# found through CHIP_ROOT (tools/esp32_config.ps1 / tools/ci_build.sh set it to the connectedhomeip tree). Only the
+# options: the library is built by GN, not by this component (CMakeLists.txt registers nothing)
+source "$(CHIP_ROOT)/config/esp32/components/chip/Kconfig"

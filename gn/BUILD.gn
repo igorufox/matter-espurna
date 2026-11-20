@@ -3,5 +3,8 @@ import("//build_overrides/chip.gni")
 
 # The data model is in chip-examples/espurna-plug (copied into connectedhomeip/examples by the build scripts)
 group("default") {
-  deps = [ "//app:MatterApp" ]
+  deps = [
+    "//app:MatterApp",
+    "//app:abi_probe",
+  ]
 }

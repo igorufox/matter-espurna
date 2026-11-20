@@ -1,0 +1,43 @@
+# The SDK the BK7231N library is compiled against, stock, no LibreTiny and no file of the firmware. What its sources
+# include:
+#   BDK 3.0.33: only the declarations of the BDK API matter_pal.h uses (rtos_pub.h, wlan_ui_pub.h, net.h,
+#     BkDriverFlash.h), with the library's sys_config.h (//bdk: sys_config_bk7231n.h of the BDK + no BLE / PMF / WPA3):
+#     //third_party/bdk; the rest of the chip comes through the API of matter_pal.h, which the firmware implements
+#   FreeRTOS-Kernel V11.1.0 with its ARM968 port (portable/GCC/ARM968) and FreeRTOSConfig.h, one package for the
+#     firmware and the library: //third_party/freertos-kernel
+#   lwIP 2.2.0 of the BDK port (its port/arch: cc.h, sys_arch.h): //third_party/lwip, with the library's own lwipopts.h
+#     (//lwipopts, before the port's)
+#   mbedTLS 3.6: //mbedtls (headers of mbedTLS 3.6.6 of igorufox/mbedtls, the library's config)
+# The links //third_party/* are made by tools/ci_build.sh / tools/build.sh. What the firmware has to match:
+# matter_requirements.h of the release package.
+
+
+bk_sdk_defines = [
+  "-DCFG_OS_FREERTOS=1",
+  "-DCONFIG_IPV6=1",
+]
+
+bk_sdk_include_flags = [
+  "-I" + rebase_path("//lwipopts"),
+  # the ARM968 port and FreeRTOSConfig.h of the BK7231N, side by side in the kernel package
+  "-I" + rebase_path("//third_party/freertos-kernel/portable/GCC/ARM968"),
+  "-I" + rebase_path("//third_party/freertos-kernel/include"),
+  "-I" + rebase_path("//third_party/lwip/src/include"),
+  "-I" + rebase_path("//third_party/lwip/port"),
+  "-I" + rebase_path("//bdk"),
+]
+foreach(dir,
+        [
+          "app/config",
+          "common",
+          "driver/common",
+          "driver/entry",
+          "driver/include",
+          "func/include",
+          "func/user_driver",
+          "ip/common",
+          "os/include",
+          "release",
+        ]) {
+  bk_sdk_include_flags += [ "-I" + rebase_path("//third_party/bdk/beken378/${dir}") ]
+}

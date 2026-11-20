@@ -37,8 +37,8 @@
 #define CHIP_IM_MAX_REPORTS_IN_FLIGHT 4
 
 /* Messages waiting for an ACK. The SDK default is PBUF_POOL_SIZE - 1, but this library is compiled against the lwipopts.h
- * of the BDK (reduced memory plan: PBUF_POOL_SIZE 3), not lwip-override/lwipopts.h that ESPurna builds lwIP with
- * (10 buffers): it got 2 entries, a report to matter-server and a reply to the hub filled them and the reply to the
+ * of the BDK (reduced memory plan: PBUF_POOL_SIZE 3) until 2026-11-19, not the 10 buffers ESPurna built lwIP with
+ * (now the library's own gn/lwipopts/lwipopts.h, 10): it got 2 entries, a report to matter-server and a reply to the hub filled them and the reply to the
  * commissioner was dropped ("mRetransTable Already Full", the hub stuck at step 2). 9 = the real pool - 1 */
 #define CHIP_CONFIG_RMP_RETRANS_TABLE_SIZE 9
 
@@ -62,7 +62,9 @@
 
 
 /* The SDK default 8 KB again: 6 KB was a cut when commissioning ran out of heap at AddNOC (before the TCM move). The task
- * stack is not measured (no uxTaskGetStackHighWaterMark in the BDK FreeRTOS) */
+ * stack is not measured (no uxTaskGetStackHighWaterMark in the BDK FreeRTOS). The platform config defines it before this
+ * one: replaced, not redefined (the "redefined" warning of every build) */
+#undef CHIP_DEVICE_CONFIG_CHIP_TASK_STACK_SIZE
 #define CHIP_DEVICE_CONFIG_CHIP_TASK_STACK_SIZE 8192
 
 /* Basic Information hardware version: "TEST_VERSION" is the SDK placeholder (the ESP32 lab board that the hub keeps reports 1 / "1") */
