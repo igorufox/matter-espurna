@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "matter_pal.h"
+#include "matter_port.h"
 
 #include <cstring>
 #include <lib/core/OTAImageHeader.h>
@@ -62,10 +62,8 @@ private:
     MutableByteSpan mBlock;
     OTADownloader * mDownloader;
     OTAImageHeaderParser mHeaderParser;
-    bool readHeader              = false;
-    ota_data_struct_t pOtaTgtHdr = { 0 };
-    uint32_t flash_data_offset   = 0;
-    uint32_t size                = 0;
+    // the firmware's update has started (matter_port_ota_begin)
+    bool started = false;
 };
 
 } // namespace chip

@@ -25,10 +25,10 @@
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 
 #include <crypto/CHIPCryptoPAL.h>
-#include <external_platform/BK7231N/DiagnosticDataProviderImpl.h>
+#include <external_platform/Port/DiagnosticDataProviderImpl.h>
 #include <platform/DiagnosticDataProvider.h>
 
-#include "matter_pal.h"
+#include "matter_port.h"
 
 #include <lwip/netif.h>
 
@@ -50,13 +50,13 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetCurrentHeapFree(uint64_t & currentHeap
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetCurrentHeapUsed(uint64_t & currentHeapUsed)
 {
-    currentHeapUsed = prvHeapGetTotalSize() - xPortGetFreeHeapSize();
+    currentHeapUsed = matter_port_heap_total() - xPortGetFreeHeapSize();
     return CHIP_NO_ERROR;
 }
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetCurrentHeapHighWatermark(uint64_t & currentHeapHighWatermark)
 {
-    currentHeapHighWatermark = prvHeapGetTotalSize() - xPortGetMinimumEverFreeHeapSize();
+    currentHeapHighWatermark = matter_port_heap_total() - xPortGetMinimumEverFreeHeapSize();
     return CHIP_NO_ERROR;
 }
 
@@ -127,7 +127,7 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetNetworkInterfaces(NetworkInterface ** 
     NetworkInterface * ifp = new NetworkInterface();
     struct netif * netif;
 
-    netif = (struct netif *) net_get_sta_handle(); // assume only on station mode
+    netif = matter_port_sta_netif(); // the station only
     if (netif == NULL || ifp == NULL)
     {
         ChipLogError(DeviceLayer, "Can't get the netif instance");
@@ -190,13 +190,12 @@ void DiagnosticDataProviderImpl::ReleaseNetworkInterfaces(NetworkInterface * net
 #if CHIP_DEVICE_CONFIG_ENABLE_WIFI
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiBssId(MutableByteSpan & BssId)
 {
-    LinkStatusTypeDef linkStatus;
+    matter_port_link_t linkStatus;
 
     constexpr size_t bssIdSize = 6;
     VerifyOrReturnError(BssId.size() >= bssIdSize, CHIP_ERROR_BUFFER_TOO_SMALL);
 
-    memset(&linkStatus, 0x0, sizeof(LinkStatusTypeDef));
-    if (0 == bk_wlan_get_link_status(&linkStatus))
+    if (MATTER_PORT_OK == matter_port_wifi_link(&linkStatus))
     {
         memcpy(BssId.data(), linkStatus.bssid, bssIdSize);
         BssId.reduce_size(bssIdSize);
@@ -211,7 +210,7 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiBssId(MutableByteSpan & BssId)
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiVersion(app::Clusters::WiFiNetworkDiagnostics::WiFiVersionEnum & wifiVersion)
 {
-    // Support 802.11a/n Wi-Fi in Beken chipset
+    // 802.11n (both chips)
     // TODO: https://github.com/project-chip/connectedhomeip/issues/25543
     wifiVersion = app::Clusters::WiFiNetworkDiagnostics::WiFiVersionEnum::kN;
     return CHIP_NO_ERROR;
@@ -221,30 +220,28 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiSecurityType(app::Clusters::WiFiNe
 {
     using app::Clusters::WiFiNetworkDiagnostics::SecurityTypeEnum;
 
-    int cipher_type;
-    cipher_type = bk_sta_cipher_type();
-    switch (cipher_type)
+    matter_port_link_t linkStatus;
+    if (MATTER_PORT_OK != matter_port_wifi_link(&linkStatus))
     {
-    case BK_SECURITY_TYPE_NONE:
+        linkStatus.security = MATTER_PORT_SECURITY_UNSPECIFIED;
+    }
+    switch (linkStatus.security)
+    {
+    case MATTER_PORT_SECURITY_NONE:
         securityType = SecurityTypeEnum::kNone;
         break;
-    case BK_SECURITY_TYPE_WEP:
+    case MATTER_PORT_SECURITY_WEP:
         securityType = SecurityTypeEnum::kWep;
         break;
-    case BK_SECURITY_TYPE_WPA_TKIP:
-    case BK_SECURITY_TYPE_WPA_AES:
+    case MATTER_PORT_SECURITY_WPA:
         securityType = SecurityTypeEnum::kWpa;
         break;
-    case BK_SECURITY_TYPE_WPA2_AES:
-    case BK_SECURITY_TYPE_WPA2_TKIP:
-    case BK_SECURITY_TYPE_WPA2_MIXED:
+    case MATTER_PORT_SECURITY_WPA2:
         securityType = SecurityTypeEnum::kWpa2;
         break;
-    case BK_SECURITY_TYPE_WPA3_SAE:
-    case BK_SECURITY_TYPE_WPA3_WPA2_MIXED:
+    case MATTER_PORT_SECURITY_WPA3:
         securityType = SecurityTypeEnum::kWpa3;
         break;
-    case BK_SECURITY_TYPE_AUTO:
     default:
         securityType = SecurityTypeEnum::kUnspecified;
     }
@@ -253,10 +250,9 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiSecurityType(app::Clusters::WiFiNe
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiChannelNumber(uint16_t & channelNumber)
 {
-    LinkStatusTypeDef linkStatus;
+    matter_port_link_t linkStatus;
 
-    memset(&linkStatus, 0x0, sizeof(LinkStatusTypeDef));
-    if (0 == bk_wlan_get_link_status(&linkStatus))
+    if (MATTER_PORT_OK == matter_port_wifi_link(&linkStatus))
     {
         channelNumber = linkStatus.channel;
     }
@@ -270,12 +266,11 @@ CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiChannelNumber(uint16_t & channelNu
 
 CHIP_ERROR DiagnosticDataProviderImpl::GetWiFiRssi(int8_t & rssi)
 {
-    LinkStatusTypeDef linkStatus;
+    matter_port_link_t linkStatus;
 
-    memset(&linkStatus, 0x0, sizeof(LinkStatusTypeDef));
-    if (0 == bk_wlan_get_link_status(&linkStatus))
+    if (MATTER_PORT_OK == matter_port_wifi_link(&linkStatus))
     {
-        rssi = linkStatus.wifi_strength;
+        rssi = linkStatus.rssi;
     }
     else
     {

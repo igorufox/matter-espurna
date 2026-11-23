@@ -45,7 +45,7 @@
 
 #include <lib/support/BitFlags.h>
 
-#include "matter_pal.h"
+#include "matter_port.h"
 
 namespace chip {
 
@@ -150,8 +150,8 @@ private:
 
     static ConnectivityManagerImpl sInstance;
     static void WiFiStationConnectedHandler();
-    static int wlan_event_cb(void * arg, event_module_t event_module, int event_id, void * event_data);
-    static int netif_event_cb(void * arg, event_module_t event_module, int event_id, void * event_data);
+    static int wlan_event_cb(void * arg, matter_port_event_module_t event_module, int event_id, void * event_data);
+    static int netif_event_cb(void * arg, matter_port_event_module_t event_module, int event_id, void * event_data);
     void IpConnectedEventNotify(void);
 };
 

@@ -24,14 +24,14 @@
 /* this file behaves like a config.h, comes first */
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 
-#include <external_platform/BK7231N/BekenConfig.h>
+#include <external_platform/Port/PortConfig.h>
 #include <platform/ConfigurationManager.h>
 #include <platform/DiagnosticDataProvider.h>
 #include <platform/internal/GenericConfigurationManagerImpl.ipp>
 #include <lib/support/CodeUtils.h>
 #include <lib/support/logging/CHIPLogging.h>
 
-#include "matter_pal.h"
+#include "matter_port.h"
 
 namespace chip {
 namespace DeviceLayer {
@@ -51,14 +51,14 @@ CHIP_ERROR ConfigurationManagerImpl::Init()
 
     ChipLogProgress(DeviceLayer, "ConfigurationManagerImpl::Init");
     // Force initialization of NVS namespaces if they doesn't already exist.
-    err = BekenConfig::EnsureNamespace(BekenConfig::kConfigNamespace_ChipFactory);
+    err = PortConfig::EnsureNamespace(PortConfig::kConfigNamespace_ChipFactory);
     SuccessOrExit(err);
-    err = BekenConfig::EnsureNamespace(BekenConfig::kConfigNamespace_ChipConfig);
+    err = PortConfig::EnsureNamespace(PortConfig::kConfigNamespace_ChipConfig);
     SuccessOrExit(err);
-    err = BekenConfig::EnsureNamespace(BekenConfig::kConfigNamespace_ChipCounters);
+    err = PortConfig::EnsureNamespace(PortConfig::kConfigNamespace_ChipCounters);
     SuccessOrExit(err);
 
-    if (BekenConfig::ConfigValueExists(BekenConfig::kCounterKey_RebootCount))
+    if (PortConfig::ConfigValueExists(PortConfig::kCounterKey_RebootCount))
     {
         err = GetRebootCount(rebootCount);
         SuccessOrExit(err);
@@ -73,20 +73,20 @@ CHIP_ERROR ConfigurationManagerImpl::Init()
         SuccessOrExit(err);
     }
 
-    if (!BekenConfig::ConfigValueExists(BekenConfig::kCounterKey_TotalOperationalHours))
+    if (!PortConfig::ConfigValueExists(PortConfig::kCounterKey_TotalOperationalHours))
     {
         err = StoreTotalOperationalHours(0);
         SuccessOrExit(err);
     }
 
-    if (!BekenConfig::ConfigValueExists(BekenConfig::kCounterKey_BootReason))
+    if (!PortConfig::ConfigValueExists(PortConfig::kCounterKey_BootReason))
     {
         err = StoreBootReason(to_underlying(BootReasonType::kUnspecified));
         SuccessOrExit(err);
     }
 
     // Initialize the generic implementation base class.
-    err = Internal::GenericConfigurationManagerImpl<BekenConfig>::Init();
+    err = Internal::GenericConfigurationManagerImpl<PortConfig>::Init();
     SuccessOrExit(err);
 
     err = CHIP_NO_ERROR;
@@ -96,37 +96,37 @@ exit:
 
 CHIP_ERROR ConfigurationManagerImpl::GetRebootCount(uint32_t & rebootCount)
 {
-    return ReadConfigValue(BekenConfig::kCounterKey_RebootCount, rebootCount);
+    return ReadConfigValue(PortConfig::kCounterKey_RebootCount, rebootCount);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::StoreRebootCount(uint32_t rebootCount)
 {
-    return WriteConfigValue(BekenConfig::kCounterKey_RebootCount, rebootCount);
+    return WriteConfigValue(PortConfig::kCounterKey_RebootCount, rebootCount);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::GetTotalOperationalHours(uint32_t & totalOperationalHours)
 {
-    return ReadConfigValue(BekenConfig::kCounterKey_TotalOperationalHours, totalOperationalHours);
+    return ReadConfigValue(PortConfig::kCounterKey_TotalOperationalHours, totalOperationalHours);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::StoreTotalOperationalHours(uint32_t totalOperationalHours)
 {
-    return WriteConfigValue(BekenConfig::kCounterKey_TotalOperationalHours, totalOperationalHours);
+    return WriteConfigValue(PortConfig::kCounterKey_TotalOperationalHours, totalOperationalHours);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::GetBootReason(uint32_t & bootReason)
 {
-    return ReadConfigValue(BekenConfig::kCounterKey_BootReason, bootReason);
+    return ReadConfigValue(PortConfig::kCounterKey_BootReason, bootReason);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::StoreBootReason(uint32_t bootReason)
 {
-    return WriteConfigValue(BekenConfig::kCounterKey_BootReason, bootReason);
+    return WriteConfigValue(PortConfig::kCounterKey_BootReason, bootReason);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::GetPrimaryWiFiMACAddress(uint8_t * buf)
 {
-    bk_wifi_sta_get_mac(buf);
+    matter_port_wifi_mac(buf);
     return CHIP_NO_ERROR;
 }
 
@@ -143,7 +143,7 @@ void ConfigurationManagerImpl::InitiateFactoryReset()
 
 CHIP_ERROR ConfigurationManagerImpl::ReadPersistedStorageValue(::chip::Platform::PersistedStorage::Key key, uint32_t & value)
 {
-    BekenConfig::Key configKey{ BekenConfig::kConfigNamespace_ChipCounters, key };
+    PortConfig::Key configKey{ PortConfig::kConfigNamespace_ChipCounters, key };
 
     CHIP_ERROR err = ReadConfigValue(configKey, value);
     if (err == CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND)
@@ -155,68 +155,68 @@ CHIP_ERROR ConfigurationManagerImpl::ReadPersistedStorageValue(::chip::Platform:
 
 CHIP_ERROR ConfigurationManagerImpl::WritePersistedStorageValue(::chip::Platform::PersistedStorage::Key key, uint32_t value)
 {
-    BekenConfig::Key configKey{ BekenConfig::kConfigNamespace_ChipCounters, key };
+    PortConfig::Key configKey{ PortConfig::kConfigNamespace_ChipCounters, key };
     return WriteConfigValue(configKey, value);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::ReadConfigValue(Key key, bool & val)
 {
-    return BekenConfig::ReadConfigValue(key, val);
+    return PortConfig::ReadConfigValue(key, val);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::ReadConfigValue(Key key, uint32_t & val)
 {
-    return BekenConfig::ReadConfigValue(key, val);
+    return PortConfig::ReadConfigValue(key, val);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::ReadConfigValue(Key key, uint64_t & val)
 {
-    return BekenConfig::ReadConfigValue(key, val);
+    return PortConfig::ReadConfigValue(key, val);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::ReadConfigValueStr(Key key, char * buf, size_t bufSize, size_t & outLen)
 {
-    return BekenConfig::ReadConfigValueStr(key, buf, bufSize, outLen);
+    return PortConfig::ReadConfigValueStr(key, buf, bufSize, outLen);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::ReadConfigValueBin(Key key, uint8_t * buf, size_t bufSize, size_t & outLen)
 {
-    return BekenConfig::ReadConfigValueBin(key, buf, bufSize, outLen);
+    return PortConfig::ReadConfigValueBin(key, buf, bufSize, outLen);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::WriteConfigValue(Key key, bool val)
 {
-    return BekenConfig::WriteConfigValue(key, val);
+    return PortConfig::WriteConfigValue(key, val);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::WriteConfigValue(Key key, uint32_t val)
 {
-    return BekenConfig::WriteConfigValue(key, val);
+    return PortConfig::WriteConfigValue(key, val);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::WriteConfigValue(Key key, uint64_t val)
 {
-    return BekenConfig::WriteConfigValue(key, val);
+    return PortConfig::WriteConfigValue(key, val);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::WriteConfigValueStr(Key key, const char * str)
 {
-    return BekenConfig::WriteConfigValueStr(key, str);
+    return PortConfig::WriteConfigValueStr(key, str);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::WriteConfigValueStr(Key key, const char * str, size_t strLen)
 {
-    return BekenConfig::WriteConfigValueStr(key, str, strLen);
+    return PortConfig::WriteConfigValueStr(key, str, strLen);
 }
 
 CHIP_ERROR ConfigurationManagerImpl::WriteConfigValueBin(Key key, const uint8_t * data, size_t dataLen)
 {
-    return BekenConfig::WriteConfigValueBin(key, data, dataLen);
+    return PortConfig::WriteConfigValueBin(key, data, dataLen);
 }
 
 void ConfigurationManagerImpl::RunConfigUnitTest(void)
 {
-    BekenConfig::RunConfigUnitTest();
+    PortConfig::RunConfigUnitTest();
 }
 
 void ConfigurationManagerImpl::DoFactoryReset(intptr_t arg)
@@ -226,11 +226,11 @@ void ConfigurationManagerImpl::DoFactoryReset(intptr_t arg)
     ChipLogProgress(DeviceLayer, "Performing factory reset");
 
     // Erase all values in the chip-config NVS namespace.
-    bk_erase_all(BK_PARTITION_MATTER_FLASH);
+    matter_port_kv_erase_all();
 
     // Restart the system.
     ChipLogProgress(DeviceLayer, "System restarting");
-    bk_reboot();
+    matter_port_reboot();
 }
 
 ConfigurationManager & ConfigurationMgrImpl()

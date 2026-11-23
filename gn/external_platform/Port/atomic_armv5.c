@@ -1,8 +1,10 @@
-/* The ARMINO API of matter_pal.h (bk_* key-value store, Wi-Fi status and events, OTA, entropy) is implemented by
- * ESPurna: code/espurna/arch/beken/matter_beken.cpp. The sizing stubs are in bk7231n_port.c.stubs */
-#include "matter_pal.h"
-
+/* __atomic_* of the library on the ARM968E-S of the BK7231N (ARMv5: no atomic instructions, libatomic is not linked)
+ * - the other chips have them from their compiler */
+#if __has_include(<freertos/FreeRTOS.h>)
+#include <freertos/FreeRTOS.h>
+#else
 #include <FreeRTOS.h>
+#endif
 
 #include <stdbool.h>
 #include <stdint.h>

@@ -21,7 +21,7 @@
  *          Platform-specific key value storage implementation for Beken
  */
 /* this file behaves like a config.h, comes first */
-#include "matter_pal.h"
+#include "matter_port.h"
 #include <platform/KeyValueStoreManager.h>
 #include <lib/support/CodeUtils.h>
 
@@ -36,7 +36,7 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Get(const char * key, void * value, size_t
 {
     CHIP_ERROR err         = CHIP_NO_ERROR;
     int32_t ret            = -1;
-    uint32_t dwTeReadBytes = 0;
+    size_t dwTeReadBytes   = 0;
 
     if ((!value) || offset_bytes > 0)
     {
@@ -47,13 +47,13 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Get(const char * key, void * value, size_t
 
     if (read_bytes_size == NULL)
     {
-        ret = bk_read_data(GetKVNameSpaceName(key), key, (char *) value, value_size, &dwTeReadBytes);
+        ret = matter_port_kv_read(GetKVNameSpaceName(key), key, value, value_size, &dwTeReadBytes);
     }
     else
     {
-        ret = bk_read_data(GetKVNameSpaceName(key), key, (char *) value, value_size, (uint32_t *) read_bytes_size);
+        ret = matter_port_kv_read(GetKVNameSpaceName(key), key, value, value_size, read_bytes_size);
     }
-    if (ret == kNoErr)
+    if (ret == MATTER_PORT_OK)
     {
         err = CHIP_NO_ERROR;
     }
@@ -69,15 +69,15 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Put(const char * key, const void * value, 
 {
     CHIP_ERROR err = CHIP_NO_ERROR;
     uint32_t ret   = 0;
-    bk_printf("put key:%s \r\n", key);
+
     if (!value)
     {
         return (err = CHIP_ERROR_INVALID_ARGUMENT);
     }
 
-    ret = bk_write_data(GetKVNameSpaceName(key), key, (char *) value, value_size);
+    ret = matter_port_kv_write(GetKVNameSpaceName(key), key, value, value_size);
 
-    if (ret == kNoErr)
+    if (ret == MATTER_PORT_OK)
     {
         err = CHIP_NO_ERROR;
     }
@@ -94,7 +94,7 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Delete(const char * key)
     uint32_t ret   = 0;
     CHIP_ERROR err = CHIP_NO_ERROR;
 
-    bk_clean_data(GetKVNameSpaceName(key), key);
+    matter_port_kv_remove(GetKVNameSpaceName(key), key);
 
     return CHIP_NO_ERROR;
 }
@@ -103,7 +103,7 @@ const char * KeyValueStoreManagerImpl::GetKVNameSpaceName(const char * key)
 {
     int idx                               = 0;
     const char * BekenkeyValueNameSpace[] = { "BEKEN0", "BEKEN1", "BEKEN2", "BEKEN3",
-                                              "BEKEN4" }; // Put all key-value date into this namespace
+                                              "BEKEN4" }; // the stored key names (BK7231N boards have them)
     if (key != NULL)
     {
         int i, len = strlen(key);

@@ -16,10 +16,9 @@
  */
 
 #pragma once
-#include "matter_pal.h"
+#include "matter_port.h"
 #include <platform/NetworkCommissioning.h>
 
-#define NC_SECURITYCONVERT(security) ((security < 3) ? security : (security == 3) ? 2 : (security < 7) ? 3 : 4)
 
 namespace chip {
 namespace DeviceLayer {
@@ -31,10 +30,10 @@ inline constexpr uint8_t kWiFiScanNetworksTimeOutSeconds   = 10;
 inline constexpr uint8_t kWiFiConnectNetworkTimeoutSeconds = 20;
 } // namespace
 
-class BKScanResponseIterator : public Iterator<WiFiScanResponse>
+class PortScanResponseIterator : public Iterator<WiFiScanResponse>
 {
 public:
-    BKScanResponseIterator(const size_t size, const wifi_scan_result_t * scanResults) : mSize(size), mpScanResults(scanResults) {}
+    PortScanResponseIterator(const size_t size, const matter_port_scan_ap_t * aps) : mSize(size), mpAps(aps) {}
     size_t Count() override { return mSize; }
     bool Next(WiFiScanResponse & item) override
     {
@@ -42,14 +41,15 @@ public:
         {
             return false;
         }
-        uint8_t ssidlenth = strlen(mpScanResults->aps[mIternum].ssid);
-        item.security.SetRaw(NC_SECURITYCONVERT(mpScanResults->aps[mIternum].security));
-        item.ssidLen  = ssidlenth;
-        item.channel  = mpScanResults->aps[mIternum].channel;
+        const auto & ap     = mpAps[mIternum];
+        const size_t length = strnlen(ap.ssid, sizeof(ap.ssid));
+        item.security.SetRaw(SecurityBits(ap.security));
+        item.ssidLen  = static_cast<uint8_t>(length);
+        item.channel  = ap.channel;
         item.wiFiBand = chip::DeviceLayer::NetworkCommissioning::WiFiBand::k2g4;
-        item.rssi     = mpScanResults->aps[mIternum].rssi;
-        memcpy(item.ssid, mpScanResults->aps[mIternum].ssid, ssidlenth);
-        memcpy(item.bssid, mpScanResults->aps[mIternum].bssid, 6);
+        item.rssi     = ap.rssi;
+        memcpy(item.ssid, ap.ssid, length);
+        memcpy(item.bssid, ap.bssid, 6);
 
         mIternum++;
         return true;
@@ -57,25 +57,45 @@ public:
     void Release() override {}
 
 private:
+    // WiFiSecurityBitmap of Network Commissioning
+    static uint8_t SecurityBits(matter_port_security_t security)
+    {
+        switch (security)
+        {
+        case MATTER_PORT_SECURITY_NONE:
+            return 0x01;
+        case MATTER_PORT_SECURITY_WEP:
+            return 0x02;
+        case MATTER_PORT_SECURITY_WPA:
+            return 0x04;
+        case MATTER_PORT_SECURITY_WPA2:
+            return 0x08;
+        case MATTER_PORT_SECURITY_WPA3:
+            return 0x10;
+        default:
+            return 0;
+        }
+    }
+
     const size_t mSize;
-    const wifi_scan_result_t * mpScanResults;
-    size_t mIternum = 1;
+    const matter_port_scan_ap_t * mpAps;
+    size_t mIternum = 0;
 };
 
-class BekenWiFiDriver final : public WiFiDriver
+class PortWiFiDriver final : public WiFiDriver
 {
 public:
     class WiFiNetworkIterator final : public NetworkIterator
     {
     public:
-        WiFiNetworkIterator(BekenWiFiDriver * aDriver) : mDriver(aDriver) {}
+        WiFiNetworkIterator(PortWiFiDriver * aDriver) : mDriver(aDriver) {}
         size_t Count() override;
         bool Next(Network & item) override;
         void Release() override { delete this; }
         ~WiFiNetworkIterator() = default;
 
     private:
-        BekenWiFiDriver * mDriver;
+        PortWiFiDriver * mDriver;
         bool mExhausted = false;
     };
 
@@ -117,9 +137,9 @@ public:
     CHIP_ERROR SetLastDisconnectReason(const ChipDeviceEvent * event);
     int32_t GetLastDisconnectReason();
 
-    static BekenWiFiDriver & GetInstance()
+    static PortWiFiDriver & GetInstance()
     {
-        static BekenWiFiDriver instance;
+        static PortWiFiDriver instance;
         return instance;
     }
     CHIP_ERROR GetSavedNetWorkConfig(WiFiNetwork * WifiNetconf);

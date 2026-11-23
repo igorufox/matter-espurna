@@ -24,7 +24,7 @@
  */
 
 // #include <lib/core/CHIPConfig.h>
-#include "matter_pal.h"
+#include "matter_port.h"
 #include <lib/support/CHIPMem.h>
 #include <platform/PlatformManager.h>
 
@@ -80,7 +80,7 @@ void * MemoryAlloc(size_t size)
 {
     void * ptr;
     VERIFY_INITIALIZED();
-    ptr = os_zalloc(size); // NULL;
+    ptr = calloc(1, size);
     return ptr;
 }
 
@@ -88,28 +88,28 @@ void * MemoryAlloc(size_t size, bool isLongTermAlloc)
 {
     void * ptr;
     VERIFY_INITIALIZED();
-    ptr = os_zalloc(size);
+    ptr = calloc(1, size);
     return ptr;
 }
 
 void * MemoryCalloc(size_t num, size_t size)
 {
     VERIFY_INITIALIZED();
-    void * ptr = os_zalloc(num * size);
+    void * ptr = calloc(num, size);
     return ptr;
 }
 
 void * MemoryRealloc(void * p, size_t size)
 {
     VERIFY_INITIALIZED();
-    p = os_realloc(p, size);
+    p = realloc(p, size);
     return p;
 }
 
 void MemoryFree(void * p)
 {
     VERIFY_INITIALIZED();
-    os_free(p);
+    free(p);
 }
 
 bool MemoryInternalCheckPointer(const void * p, size_t min_size)

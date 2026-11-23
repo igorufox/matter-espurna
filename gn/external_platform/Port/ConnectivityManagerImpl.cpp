@@ -50,8 +50,7 @@
 
 #include "NetworkCommissioningDriver.h"
 
-#include "matter_pal.h"
-#include "matter_pal.h"
+#include "matter_port.h"
 
 using namespace ::chip;
 using namespace ::chip::Inet;
@@ -61,7 +60,7 @@ namespace chip {
 namespace DeviceLayer {
 
 ConnectivityManagerImpl ConnectivityManagerImpl::sInstance;
-NetworkCommissioning::BekenWiFiDriver::WiFiNetwork mWifiNetconf;
+NetworkCommissioning::PortWiFiDriver::WiFiNetwork mWifiNetconf;
 
 // ==================== ConnectivityManager Platform Internal Methods ====================
 
@@ -142,7 +141,7 @@ void ConnectivityManagerImpl::_OnPlatformEvent(const ChipDeviceEvent * event)
         ChipLogProgress(DeviceLayer, "_OnPlatformEvent WIFI_EVENT_STA_CONNECTED");
         if (mWiFiStationState == kWiFiStationState_Connecting)
         {
-            NetworkCommissioning::BekenWiFiDriver::GetInstance().OnConnectWiFiNetwork();
+            NetworkCommissioning::PortWiFiDriver::GetInstance().OnConnectWiFiNetwork();
             ChangeWiFiStationState(kWiFiStationState_Connecting_Succeeded);
         }
         DriveStationState();
@@ -170,8 +169,8 @@ CHIP_ERROR ConnectivityManagerImpl::_SetWiFiStationMode(WiFiStationMode val)
 
     if (mWiFiStationMode == kWiFiStationMode_Disabled && val == kWiFiStationMode_Enabled)
     {
-        BK_LOG_ON_ERR(bk_event_register_cb(EVENT_MOD_WIFI, EVENT_ID_ALL, ConnectivityManagerImpl().wlan_event_cb, NULL));
-        BK_LOG_ON_ERR(bk_event_register_cb(EVENT_MOD_NETIF, EVENT_ID_ALL, ConnectivityManagerImpl().netif_event_cb, NULL));
+        MATTER_PORT_LOG_ON_ERR(matter_port_event_register(MATTER_PORT_EVENT_WIFI, MATTER_PORT_EVENT_ID_ALL, ConnectivityManagerImpl().wlan_event_cb, NULL));
+        MATTER_PORT_LOG_ON_ERR(matter_port_event_register(MATTER_PORT_EVENT_NETIF, MATTER_PORT_EVENT_ID_ALL, ConnectivityManagerImpl().netif_event_cb, NULL));
         ChangeWiFiStationState(kWiFiStationState_Connecting);
     }
 
@@ -195,7 +194,7 @@ exit:
 bool ConnectivityManagerImpl::_IsWiFiStationProvisioned(void)
 {
     if (mWifiNetconf.ssidLen == 0)
-        NetworkCommissioning::BekenWiFiDriver::GetInstance().GetSavedNetWorkConfig(&mWifiNetconf);
+        NetworkCommissioning::PortWiFiDriver::GetInstance().GetSavedNetWorkConfig(&mWifiNetconf);
     ChipLogError(DeviceLayer, "wifi ssid:%s\r\n", mWifiNetconf.ssid);
     return (mWifiNetconf.ssidLen != 0) ? true : false;
 }
@@ -288,45 +287,44 @@ void ConnectivityManagerImpl::WiFiStationConnectedHandler()
 
 static bool stationConnected = false;
 
-int ConnectivityManagerImpl::netif_event_cb(void * arg, event_module_t event_module, int event_id, void * event_data)
+int ConnectivityManagerImpl::netif_event_cb(void * arg, matter_port_event_module_t event_module, int event_id, void * event_data)
 {
-    ssid_key_save_t wpa_save = { { 0 } };
     switch (event_id)
     {
-    case EVENT_NETIF_GOT_IP4:
+    case MATTER_PORT_EVENT_NETIF_GOT_IP4:
         stationConnected = true;
         WiFiStationConnectedHandler();
-        ChipLogProgress(DeviceLayer, "netif_event_cb EVENT_NETIF_GOT_IP4");
+        ChipLogProgress(DeviceLayer, "netif_event_cb GOT_IP4");
         break;
     default:
         ChipLogProgress(DeviceLayer, "unSupported netif status:%d", event_id);
         break;
     }
 
-    return BK_OK;
+    return MATTER_PORT_OK;
 }
 
-int ConnectivityManagerImpl::wlan_event_cb(void * arg, event_module_t event_module, int event_id, void * event_data)
+int ConnectivityManagerImpl::wlan_event_cb(void * arg, matter_port_event_module_t event_module, int event_id, void * event_data)
 {
     switch (event_id)
     {
-    case EVENT_WIFI_STA_CONNECTED:
+    case MATTER_PORT_EVENT_WIFI_STA_CONNECTED:
         ChipLogProgress(DeviceLayer, "wlan_event_cb EVENT_WIFI_STA_CONNECTED");
         break;
-    case EVENT_WIFI_STA_DISCONNECTED:
+    case MATTER_PORT_EVENT_WIFI_STA_DISCONNECTED:
         stationConnected = false;
         ChipLogProgress(DeviceLayer, "wlan_event_cb EVENT_WIFI_STA_DISCONNECTED");
-        matter_wifi_sta_disconnected_t * sta_disconnected;
-        sta_disconnected = (matter_wifi_sta_disconnected_t *) event_data;
+        matter_port_sta_disconnected_t * sta_disconnected;
+        sta_disconnected = (matter_port_sta_disconnected_t *) event_data;
         ChipDeviceEvent myevent;
-        myevent.Platform.BKSystemEvent.Data.WiFiStaDisconnected = sta_disconnected->disconnect_reason;
-        NetworkCommissioning::BekenWiFiDriver::GetInstance().SetLastDisconnectReason(&myevent);
+        myevent.Platform.PortSystemEvent.Data.WiFiStaDisconnected = sta_disconnected->disconnect_reason;
+        NetworkCommissioning::PortWiFiDriver::GetInstance().SetLastDisconnectReason(&myevent);
         break;
     default:
         ChipLogProgress(DeviceLayer, "unSupported wifi status:%d", event_id);
         break;
     }
-    return BK_OK;
+    return MATTER_PORT_OK;
 }
 
 void ConnectivityManagerImpl::DriveStationState()
@@ -385,17 +383,11 @@ void ConnectivityManagerImpl::DriveStationState()
                 now >= mLastStationConnectFailTime + mWiFiStationReconnectInterval)
             {
                 ChipLogProgress(DeviceLayer, "try to connect wifi");
-                wifi_sta_config_t sta_config;
-
-                memset(&sta_config, 0x0, sizeof(sta_config));
-                sta_config.security = WIFI_SECURITY_AUTO; // can't use WIFI_DEFAULT_STA_CONFIG because of C99 designator error
-                Platform::CopyString(sta_config.ssid, mWifiNetconf.ssidLen, mWifiNetconf.ssid);
-                Platform::CopyString(sta_config.password, mWifiNetconf.credentialsLen, mWifiNetconf.credentials);
-                BK_LOG_ON_ERR(bk_wifi_sta_set_config(&sta_config));
-                BK_LOG_ON_ERR(bk_wifi_sta_start());
-                BK_LOG_ON_ERR(bk_event_register_cb(EVENT_MOD_WIFI, EVENT_ID_ALL, ConnectivityManagerImpl().wlan_event_cb, NULL));
-                BK_LOG_ON_ERR(bk_event_register_cb(EVENT_MOD_NETIF, EVENT_ID_ALL, ConnectivityManagerImpl().netif_event_cb, NULL));
-                BK_LOG_ON_ERR(bk_wifi_sta_connect());
+                MATTER_PORT_LOG_ON_ERR(matter_port_event_register(MATTER_PORT_EVENT_WIFI, MATTER_PORT_EVENT_ID_ALL, ConnectivityManagerImpl().wlan_event_cb, NULL));
+                MATTER_PORT_LOG_ON_ERR(matter_port_event_register(MATTER_PORT_EVENT_NETIF, MATTER_PORT_EVENT_ID_ALL, ConnectivityManagerImpl().netif_event_cb, NULL));
+                MATTER_PORT_LOG_ON_ERR(matter_port_wifi_connect(reinterpret_cast<const char *>(mWifiNetconf.ssid), mWifiNetconf.ssidLen,
+                                                                reinterpret_cast<const char *>(mWifiNetconf.credentials),
+                                                                mWifiNetconf.credentialsLen));
                 ChangeWiFiStationState(kWiFiStationState_Connecting);
             }
 
@@ -445,7 +437,7 @@ void ConnectivityManagerImpl::ChangeWiFiStationState(WiFiStationState newState)
         ChipLogProgress(DeviceLayer, "WiFi station state change: %s -> %s", WiFiStationStateToStr(mWiFiStationState),
                         WiFiStationStateToStr(newState));
         mWiFiStationState = newState;
-        SystemLayer().ScheduleLambda([]() { NetworkCommissioning::BekenWiFiDriver::GetInstance().OnNetworkStatusChange(); });
+        SystemLayer().ScheduleLambda([]() { NetworkCommissioning::PortWiFiDriver::GetInstance().OnNetworkStatusChange(); });
     }
 }
 

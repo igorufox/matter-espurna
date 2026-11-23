@@ -28,7 +28,7 @@
 #include <lib/support/logging/Constants.h>
 
 #include <stdio.h>
-extern "C" void bk_printf(const char * fmt, ...);
+#include "matter_port.h"
 
 #ifdef LOG_LOCAL_LEVEL
 #undef LOG_LOCAL_LEVEL
@@ -37,9 +37,6 @@ extern "C" void bk_printf(const char * fmt, ...);
 namespace chip {
 namespace Logging {
 namespace Platform {
-
-// ESPurna prints the lines from its loop (matter_beken.cpp), bk_printf when built without it
-extern "C" void matter_log(const char * line) __attribute__((weak));
 
 void LogV(const char * module, uint8_t category, const char * msg, va_list v)
 {
@@ -51,14 +48,7 @@ void LogV(const char * module, uint8_t category, const char * msg, va_list v)
         vsnprintf(line + prefix, sizeof(line) - prefix, msg, v);
     }
 
-    if (matter_log)
-    {
-        matter_log(line);
-    }
-    else
-    {
-        bk_printf("chip %s\r\n", line);
-    }
+    matter_port_log(line);
 }
 
 } // namespace Platform

@@ -25,8 +25,8 @@
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 
 #include <crypto/CHIPCryptoPAL.h>
-#include <external_platform/BK7231N/DiagnosticDataProviderImpl.h>
-#include <external_platform/BK7231N/SystemTimeSupport.h>
+#include <external_platform/Port/DiagnosticDataProviderImpl.h>
+#include <external_platform/Port/SystemTimeSupport.h>
 #include <platform/PlatformManager.h>
 #include <platform/internal/GenericPlatformManagerImpl_FreeRTOS.ipp>
 

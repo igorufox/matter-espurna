@@ -22,12 +22,8 @@
 #include <app/server/Dnssd.h>
 #include <app/server/Server.h>
 #include <data-model-providers/codegen/Instance.h>
-// Wi-Fi network commissioning: the driver of the chip's platform
-#if CHIP_DEVICE_LAYER_TARGET_ESP32
-#include <platform/ESP32/NetworkCommissioningDriver.h>
-#else
-#include <external_platform/BK7231N/NetworkCommissioningDriver.h>
-#endif
+// Wi-Fi network commissioning: the driver of the platform layer
+#include <external_platform/Port/NetworkCommissioningDriver.h>
 
 using namespace chip;
 using namespace chip::Credentials;
@@ -35,11 +31,7 @@ using namespace chip::DeviceLayer;
 
 namespace {
 app::Clusters::NetworkCommissioning::Instance
-#if CHIP_DEVICE_LAYER_TARGET_ESP32
-    sWiFiNetworkCommissioningInstance(0 /* Endpoint Id */, &(NetworkCommissioning::ESPWiFiDriver::GetInstance()));
-#else
-    sWiFiNetworkCommissioningInstance(0 /* Endpoint Id */, &(NetworkCommissioning::BekenWiFiDriver::GetInstance()));
-#endif
+    sWiFiNetworkCommissioningInstance(0 /* Endpoint Id */, &(NetworkCommissioning::PortWiFiDriver::GetInstance()));
 
 } // namespace
 

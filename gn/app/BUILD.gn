@@ -18,18 +18,11 @@ static_library("MatterApp") {
     "${chip_root}/src/lib",
     "${chip_root}/src/setup_payload",
   ]
-  # the chip's port of the BK7231N (__atomic_*, the bk_* API ESPurna implements); the ESP32 platform is
-  # connectedhomeip's own (src/platform/ESP32, through chip_device_platform)
-  if (chip_device_platform == "external") {
-    public_deps += [ "//external_platform/BK7231N:bk7231n_port" ]
+  # __atomic_* of the ARMv5 (BK7231N); the platform layer of every chip is //external_platform/Port, with its log output
+  if (current_cpu == "arm") {
+    public_deps += [ "//external_platform/Port:atomic_armv5" ]
   }
-  # the log output of connectedhomeip (chip::Logging::Platform::LogV): the BK7231N port has it among its sources, the
-  # ESP32 platform in a target of its own (ESP_LOG)
-  if (chip_device_platform == "esp32") {
-    public_deps += [ "${chip_root}/src/platform/ESP32:logging" ]
-  }
-  # mDNS: ESPurna's one responder publishes Matter's services on both chips (chip_mdns = "platform"; the ESP32
-  # platform's DNS-SD on ESP-IDF's mdns is taken out by tools/chip_patch.py)
+  # mDNS: the firmware's responder publishes Matter's services on every chip (chip_mdns = "platform")
   # BLE: one BLEManagerImpl for every chip on the firmware's stack (app/matter_ble.h)
   if (chip_enable_ble) {
     sources += [ "../platform/ble/BLEManagerImpl.cpp" ]

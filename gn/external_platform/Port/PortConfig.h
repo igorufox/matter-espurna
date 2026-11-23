@@ -25,7 +25,7 @@ namespace chip {
 namespace DeviceLayer {
 namespace Internal {
 
-class BekenConfig
+class PortConfig
 {
 public:
     struct Key;
@@ -97,7 +97,7 @@ public:
     static void RunConfigUnitTest(void);
 };
 
-struct BekenConfig::Key
+struct PortConfig::Key
 {
     const char * Namespace;
     const char * Name;
@@ -105,7 +105,7 @@ struct BekenConfig::Key
     bool operator==(const Key & other) const;
 };
 
-inline bool BekenConfig::Key::operator==(const Key & other) const
+inline bool PortConfig::Key::operator==(const Key & other) const
 {
     return strcmp(Namespace, other.Namespace) == 0 && strcmp(Name, other.Name) == 0;
 }

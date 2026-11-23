@@ -23,7 +23,7 @@
  */
 #pragma once
 
-#include <external_platform/BK7231N/BekenConfig.h>
+#include <external_platform/Port/PortConfig.h>
 #include <platform/ConnectivityManager.h>
 #include <platform/internal/GenericConfigurationManagerImpl.h>
 
@@ -32,7 +32,7 @@ namespace DeviceLayer {
 /**
  * Concrete implementation of the ConfigurationManager singleton object for the Beken platform.
  */
-class ConfigurationManagerImpl : public Internal::GenericConfigurationManagerImpl<Internal::BekenConfig>
+class ConfigurationManagerImpl : public Internal::GenericConfigurationManagerImpl<Internal::PortConfig>
 {
 public:
     // This returns an instance of this class.

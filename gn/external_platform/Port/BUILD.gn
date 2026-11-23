@@ -1,13 +1,13 @@
-# BK7231N platform layer: copy of connectedhomeip v1.4.2.0 src/platform/Beken (ARMINO); BLE: the common
-# platform/ble/BLEManagerImpl on the firmware's stack,
-# vendor calls go through matter_pal.h (BDK 3.0.33 + the ARMINO API to port, bk7231n_port.c).
+# The platform layer of every chip (BK7231N, ESP32): connectedhomeip v1.4.2.0 src/platform/Beken (ARMINO) with its
+# vendor calls replaced by matter_port.h, which the firmware implements; FreeRTOS and lwIP of the SDK under it. BLE:
+# the common platform/ble/BLEManagerImpl on the firmware's stack.
 import("//build_overrides/chip.gni")
 
 import("${chip_root}/build/chip/buildconfig_header.gni")
 import("${chip_root}/src/lib/core/core.gni")
 import("${chip_root}/src/platform/device.gni")
 
-_p = "external_platform/BK7231N"
+_p = "external_platform/Port"
 
 buildconfig_header("custom_buildconfig") {
   header = "CHIPDeviceBuildConfig.h"
@@ -23,8 +23,8 @@ buildconfig_header("custom_buildconfig") {
     "CHIP_STACK_LOCK_TRACKING_ERROR_FATAL=false",
     "CHIP_ENABLE_ADDITIONAL_DATA_ADVERTISING=false",
     "CHIP_DEVICE_CONFIG_RUN_AS_ROOT=false",
-    "CHIP_DEVICE_LAYER_TARGET_BK7231N=1",
-    "CHIP_DEVICE_LAYER_TARGET=BK7231N",
+    "CHIP_DEVICE_LAYER_TARGET_PORT=1",
+    "CHIP_DEVICE_LAYER_TARGET=Port",
     "CHIP_USE_TRANSITIONAL_COMMISSIONABLE_DATA_PROVIDER=1",
     "CHIP_USE_TRANSITIONAL_DEVICE_INSTANCE_INFO_PROVIDER=1",
     "CHIP_DEVICE_CONFIG_ENABLE_WIFI=1",
@@ -51,10 +51,10 @@ group("platform_buildconfig") {
   public_deps = [ ":custom_buildconfig" ]
 }
 
-static_library("BK7231N") {
+static_library("Port") {
   sources = [
     "${chip_root}/src/platform/SingletonConfigurationManager.cpp",
-    "BekenConfig.cpp",
+    "PortConfig.cpp",
     "CHIPMem-Platform.cpp",
     "ConfigurationManagerImpl.cpp",
     "ConnectivityManagerImpl.cpp",
@@ -85,7 +85,7 @@ static_library("BK7231N") {
   ]
 }
 
-# The ARMINO API of matter_pal.h on BDK: stubs for now (sizing)
-static_library("bk7231n_port") {
-  sources = [ "bk7231n_port.c" ]
+# __atomic_* for the ARMv5 of the BK7231N (no atomic instructions, no libatomic in the link)
+static_library("atomic_armv5") {
+  sources = [ "atomic_armv5.c" ]
 }

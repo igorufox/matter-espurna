@@ -1,14 +1,13 @@
 /* ESPurna-facing entry of the Matter plug: the data model (plug.zap) and the server, nothing of the board's identity.
- * The same application on every chip (BK7231N, ESP32), only the platform of connectedhomeip under it differs.
+ * The same application and the same platform layer on every chip (BK7231N, ESP32: external_platform/Port).
  * Device identity is ESPurna's (matter_identity.cpp of the fork, one code with the ESP32): the factory data of the
  * stock firmware (Quectel / Tuya) when the board has it, or an own identity made once per board (namespace
  * "espurna-id" of the key-value store). ESPurna sets its providers in matter_identity_install(), called before the
  * server init; without it the platform ones stay (SDK test values).
  * ESPurna -> Matter: matter_app_start(), matter_app_plugs(), matter_set_onoff(); the codes, controllers, pairing window and
  * ping are ESPurna's own on the server API (matter_app.cpp of the fork)
- * Matter -> ESPurna: matter_onoff_changed(), matter_identity_install() (weak); on the BK7231N also the bk_* platform
- * API of matter_pal.h, which ESPurna implements (key-value store, Wi-Fi status and events, entropy); the ESP32 platform
- * is ESP-IDF's (NVS, esp_wifi events)
+ * Matter -> ESPurna: matter_onoff_changed(), matter_identity_install() (weak), and the matter_port_* API of the
+ * platform layer (external_platform/Port/matter_port.h: key-value store, Wi-Fi, events, OTA, log), on every chip
  * Root node + one On/Off Plug-in Unit (0x010A) on endpoint 1 for a board with one relay, or a bridge for more relays:
  * Aggregator on endpoint 2 and a Bridged Node plug per relay on endpoints 3..6 (matter_plug_count(), EnablePlugs()).
  * On-network commissioning only (no BLE). */
@@ -43,7 +42,7 @@
 #include <cstring>
 
 // FreeRTOS of the chip's SDK (ESP-IDF keeps it under freertos/)
-#if CHIP_DEVICE_LAYER_TARGET_ESP32
+#if __has_include(<freertos/FreeRTOS.h>)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #else
@@ -328,8 +327,8 @@ void InitServer(intptr_t)
     {
         SetDefaultNodeLabel(matter_node_label());
     }
-    // Wi-Fi belongs to ESPurna: Matter only follows its station (BK7231N: the connected / got IP events of
-    // bk_event_register_cb, ESP32: the esp_wifi / IP events of ESP-IDF)
+    // Wi-Fi belongs to ESPurna: Matter only follows its station (the connected / got IP events of
+    // matter_port_event_register)
     ConnectivityMgr().SetWiFiStationMode(ConnectivityManager::kWiFiStationMode_Enabled);
     sServerReady = true;
 }

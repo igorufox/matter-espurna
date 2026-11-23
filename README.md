@@ -10,17 +10,17 @@ Arduino-ESP32, esp_matter, with another data model.)
 
 - `gn/` - own GN root, one for both chips (`.gn`; the chip's arguments come with `gn gen`: `chips/bk7231n.gni`,
   `chips/esp32.gni`), `toolchain/` (arm-none-eabi for the BK7231N, xtensa-esp32-elf for the ESP32), the application
-  (`app/`: data model, `matter_app.cpp` with the C API, `AppServer`, `ProjectConfig.h`) and the platforms:
-  - BK7231N: our port `external_platform/BK7231N/` (derived from the Beken platform of connectedhomeip for the Armino
-    SDK; Wi-Fi, key-value store, events, entropy and factory data come from the firmware through the `bk_*` API of
-    `matter_pal.h`; the `__atomic_*` of the ARM968E-S in `bk7231n_port.c`), compiled against FreeRTOS-Kernel V11.1.0
-    with its ARM968 port, lwIP 2.2.0 of the BDK port with the library's `lwipopts/lwipopts.h` and the headers of
-    Mbed TLS 3.6.6 with the library's config (`mbedtls/`), and of BDK 3.0.33 only the API `matter_pal.h` declares
-    with the library's `bdk/sys_config.h` (`chips/bk7231n_sdk.gni`)
-  - ESP32: connectedhomeip's own `src/platform/ESP32` (what esp_matter has too), compiled with the flags, include folders
-    and `sdkconfig.h` stock ESP-IDF 5.5.5 gives a component of the library's ESP-IDF project `esp32/` (its own
-    `sdkconfig.defaults`: FreeRTOS 11 SMP, 1 ms tick, IPv6, HKDF; `chips/esp32_flags.gni`, made by
-    `tools/gen_esp32_flags.py`), mbedTLS, lwIP and FreeRTOS of ESP-IDF (`mbedtls_idf/`)
+  (`app/`: data model, `matter_app.cpp` with the C API, `AppServer`, `ProjectConfig.h`) and ONE platform layer for every
+  chip, `external_platform/Port/` (derived from the Beken platform of connectedhomeip for the Armino SDK): Wi-Fi,
+  key-value store, events, OTA, log and heap size come from the firmware through `matter_port.h`; FreeRTOS and lwIP of
+  the SDK under it. The build arguments every chip shares are `chips/matter.gni`; per chip only the compiler and SDK:
+  - BK7231N: FreeRTOS-Kernel V11.1.0 with its ARM968 port, lwIP 2.2.0 of the BDK port with the library's
+    `lwipopts/lwipopts.h`, the headers of Mbed TLS 3.6.6 with the library's config (`mbedtls/`), BDK 3.0.33 headers
+    with the library's `bdk/sys_config.h` (`chips/bk7231n_sdk.gni`); the `__atomic_*` of the ARMv5 in
+    `external_platform/Port/atomic_armv5.c`
+  - ESP32: the flags, include folders and `sdkconfig.h` stock ESP-IDF 5.5.5 gives a component of the library's
+    ESP-IDF project `esp32/` (its own `sdkconfig.defaults`: FreeRTOS 11 SMP, 1 ms tick, IPv6, HKDF;
+    `chips/esp32_flags.gni`, made by `tools/gen_esp32_flags.py`), mbedTLS, lwIP and FreeRTOS of ESP-IDF (`mbedtls_idf/`)
   The identity of the board (factory data or an own development DAC), the pairing codes, the controllers and the pairing
   window are ESPurna's (`matter_identity.cpp`, `matter_app.cpp` of the fork): the library calls
   `matter_identity_install()` before the server init
@@ -36,7 +36,7 @@ Arduino-ESP32, esp_matter, with another data model.)
 
 connectedhomeip is not part of this repository: commit `b87051a95f` (Matter 1.5, the same commit as esp_matter 1.5.1
 of the ESP32 build of ESPurna) at `C:\working\ginhub\libs\connectedhomeip` (the owner's folder of libraries; upstream
-as it is, `tools/chip_patch.py` patches it at build time) with the submodules nlassert, nlio, mbedtls,
+as it is, not patched) with the submodules nlassert, nlio, mbedtls,
 jsoncpp and pigweed, linked as `gn/third_party/connectedhomeip` (an NTFS junction: the Windows gcc can not follow a
 WSL symlink; `build.sh` makes it). The data model target (`gn/chip-examples/espurna-plug/BUILD.gn`) is copied into
 `<connectedhomeip>/examples/espurna-plug` by `build.sh` / `ci_build.sh`: since 1.5 a `chip_data_model` may use

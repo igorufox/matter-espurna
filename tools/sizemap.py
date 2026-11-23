@@ -4,7 +4,7 @@ import re, sys, collections
 
 COMPONENTS = [
     # complete_static_lib flattens objects to "<gn target>.<file>.o": classify by target name (and file for the app glue)
-    ('platform BK7231N (port, copied Beken code)', ('(BK7231N.', '(bk7231n_port.')),
+    ('platform layer (Port)', ('(Port.', '(atomic_armv5.')),
     ('mbedTLS 2.28', ('(libmbedtls.',)),
     ('crypto PAL (mbedTLS) + ASN1', ('(libChipCrypto.', '(cryptopal_mbedtls.', '(libASN1.')),
     ('credentials (certs, DAC, fabric table)', ('(libCredentials.',)),

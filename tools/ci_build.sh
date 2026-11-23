@@ -1,6 +1,6 @@
 #!/bin/bash
 # Native Linux build of libMatterApp.a for every chip and the release packages (GitHub Actions, or Linux / WSL by
-# hand): the same connectedhomeip, plug.zap data model and application, the platform of the chip under it
+# hand): the same connectedhomeip, plug.zap data model, application and platform layer; per chip the compiler and SDK
 #
 #   tools/ci_build.sh <deps_dir> <out_dir>
 #
@@ -183,8 +183,6 @@ done
 # the data model target has to live under connectedhomeip/examples (visibility of src/app:required-privileges)
 mkdir -p "$CHIP/examples/espurna-plug"
 cp "$M/gn/chip-examples/espurna-plug/BUILD.gn" "$CHIP/examples/espurna-plug/BUILD.gn"
-# the DNS-SD of the ESP32 platform goes, the library's own takes its place (tools/chip_patch.py)
-python3 "$M/tools/chip_patch.py" "$CHIP"
 # the flags ESP-IDF gives a component of gn/esp32, for the ESP32 build
 python3 "$M/tools/gen_esp32_flags.py" "$IDF" "$OUT/esp32-idf" "$M/gn/chips/esp32_flags.gni"
 
@@ -202,8 +200,8 @@ cd "$M/gn"
 # one chip: <chip> <gn args> <strip> <nm>
 build() {
     echo "== build $1"
-    # no include check (`--check`, any value of it turns it on): connectedhomeip's ESP32 platform includes headers of
-    # targets it does not depend on (OTAImageProcessorImpl.h: ota-requestor), its own ESP-IDF build does not check
+    # no include check (`--check`, any value of it turns it on): the platform layer includes headers of targets it does
+    # not depend on (OTAImageProcessorImpl.h: ota-requestor)
     gn gen "$OUT/build-$1" --args="$2"
     ninja -j "$JOBS" -C "$OUT/build-$1" default
 

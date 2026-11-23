@@ -24,8 +24,14 @@
 /* this file behaves like a config.h, comes first */
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 
+// the FreeRTOS of the SDK: ESP-IDF keeps its headers under freertos/
+#if __has_include(<freertos/FreeRTOS.h>)
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#else
 #include <FreeRTOS.h>
 #include <task.h>
+#endif
 
 namespace chip {
 namespace System {

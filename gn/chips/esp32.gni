@@ -1,8 +1,7 @@
 # Build arguments of the ESP32 library (Xtensa LX6, stock ESP-IDF 5.5): gn gen
-# --args='import("//chips/esp32.gni")' (ref. //.gn). The same application and data model as the BK7231N one; the
-# platform is connectedhomeip's own src/platform/ESP32 (what esp_matter uses as well), compiled with the flags of the
-# ESP-IDF project of the library, gn/esp32 (chips/esp32_flags.gni, tools/gen_esp32_flags.py), as config/esp32 of
-# connectedhomeip does with the flags of an ESP-IDF project.
+# --args='import("//chips/esp32.gni")' (ref. //.gn). The same application, data model and platform layer as the
+# BK7231N one (//external_platform/Port, the firmware implements its matter_port.h), compiled with the flags of the
+# ESP-IDF project of the library, gn/esp32 (chips/esp32_flags.gni, tools/gen_esp32_flags.py).
 import("//build_overrides/chip.gni")
 import("//chips/esp32_flags.gni")
 
@@ -14,80 +13,13 @@ optimize_debug = false
 optimize_for_size = true
 symbol_level = 1
 
-# BLE: the library's BLEManagerImpl (platform/ble); the BLE options of connectedhomeip's ESP32 component (its Kconfig shows
-# them only with CONFIG_BT_ENABLED, the library has no BLE stack of ESP-IDF): the values of CHIPDeviceConfig.h the BK7231N
-# has (advertising 20..60 ms fast, 150..1200 ms slow; units of 0.625 ms), one behaviour on both chips
-target_defines = [
-  "EXTERNAL_BLEMANAGERIMPL_HEADER=<platform/ble/BLEManagerImpl.h>",
-  "CONFIG_BLE_DEVICE_NAME_PREFIX=\"MATTER-\"",
-  "CONFIG_BLE_FAST_ADVERTISING_INTERVAL_MIN=32",
-  "CONFIG_BLE_FAST_ADVERTISING_INTERVAL_MAX=96",
-  "CONFIG_BLE_SLOW_ADVERTISING_INTERVAL_MIN=240",
-  "CONFIG_BLE_SLOW_ADVERTISING_INTERVAL_MAX=1920",
-]
-# the GN root on the include path: <app/ProjectConfig.h> of the application (the BK7231N has it through
-# chip_external_platform_include_dir of its external platform)
-target_cflags = esp32_defines + [ "-I" + rebase_path("//") ] + esp32_include_flags
+target_defines = []
+
+target_cflags = esp32_defines + esp32_include_flags
 target_cflags_c = esp32_cflags_c
 target_cflags_cc = esp32_cflags_cc
 
-# Platform layer: connectedhomeip's ESP32 one
-chip_device_platform = "esp32"
-
-# the project config of the application, the same on every chip
-chip_project_config_include = "<app/ProjectConfig.h>"
-chip_device_project_config_include = "<app/ProjectConfig.h>"
-chip_system_project_config_include = ""
-chip_ble_project_config_include = ""
-
 # lwIP, FreeRTOS and mbedTLS of ESP-IDF (headers through target_cflags, the archives are in ESPurna's link)
-lwip_platform = "external"
-chip_system_config_use_lwip = true
-chip_system_config_use_sockets = false
 mbedtls_target = "//mbedtls_idf:mbedtls"
 
-chip_build_tests = false
-chip_build_libshell = false
-chip_config_enable_arg_parser = false
-
-# Wi-Fi; commissioning on the network, and over BLE when the firmware attaches its BLE stack (app/matter_ble.h,
-# platform/ble/BLEManagerImpl, as the BK7231N one: not the NimBLE / Bluedroid managers of the ESP32 platform, no stack
-# in the library); no Thread / Ethernet
-chip_enable_wifi = true
-chip_enable_ethernet = false
-chip_enable_openthread = false
-chip_config_network_layer_ble = true
-chip_enable_ble = true
-chip_enable_chipoble = true
-chip_bt_nimble_enabled = false
-chip_bt_bluedroid_enabled = false
-chip_enable_additional_data_advertising = false
-chip_enable_rotating_device_id = false
-
-chip_inet_config_enable_ipv4 = true
-chip_inet_config_enable_tcp_endpoint = false
-chip_inet_config_enable_udp_endpoint = true
-# mDNS: ESPurna's one responder on both chips (gn/platform/EspurnaDnssd.cpp), not connectedhomeip's minimal mDNS and
-# not the mdns component of ESP-IDF
-chip_mdns = "platform"
-
-chip_config_memory_management = "platform"
-chip_memory_alloc_mode = "default"
-chip_enable_ota_requestor = true
-
-# the identity of the board is ESPurna's (matter_identity.cpp): no factory data / secure cert providers of the platform
-chip_use_factory_data_provider = false
-chip_use_device_info_provider = false
-chip_use_secure_cert_dac_provider = false
-
-# logging: errors + progress, no detail/automation (as the BK7231N one)
-chip_logging = true
-chip_detail_logging = false
-chip_automation_logging = false
-chip_enable_transport_trace = false
-
-chip_stack_lock_tracking = "none"
-chip_use_transitional_commissionable_data_provider = true
-
-treat_warnings_as_errors = false
-chip_system_config_provide_statistics = false
+import("//chips/matter.gni")

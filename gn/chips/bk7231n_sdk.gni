@@ -1,8 +1,8 @@
 # The SDK the BK7231N library is compiled against, stock, no LibreTiny and no file of the firmware. What its sources
 # include:
-#   BDK 3.0.33: only the declarations of the BDK API matter_pal.h uses (rtos_pub.h, wlan_ui_pub.h, net.h,
-#     BkDriverFlash.h), with the library's sys_config.h (//bdk: sys_config_bk7231n.h of the BDK + no BLE / PMF / WPA3):
-#     //third_party/bdk; the rest of the chip comes through the API of matter_pal.h, which the firmware implements
+#   BDK 3.0.33: the headers the SDK's lwIP port reaches, with the library's sys_config.h (//bdk: sys_config_bk7231n.h
+#     of the BDK + no BLE / PMF / WPA3): //third_party/bdk; the platform layer calls no BDK API, the chip comes
+#     through matter_port.h, which the firmware implements
 #   FreeRTOS-Kernel V11.1.0 with its ARM968 port (portable/GCC/ARM968) and FreeRTOSConfig.h, one package for the
 #     firmware and the library: //third_party/freertos-kernel
 #   lwIP 2.2.0 of the BDK port (its port/arch: cc.h, sys_arch.h): //third_party/lwip, with the library's own lwipopts.h

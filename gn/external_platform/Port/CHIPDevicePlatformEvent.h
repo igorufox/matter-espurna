@@ -35,7 +35,7 @@ namespace DeviceEventType {
  */
 enum PublicPlatformSpecificEventTypes
 {
-    kBKSystemEvent = kRange_PublicPlatformSpecific,
+    kPortSystemEvent = kRange_PublicPlatformSpecific,
 };
 
 /**
@@ -83,7 +83,7 @@ struct ChipDevicePlatformEvent final
             {
                 uint16_t WiFiStaDisconnected;
             } Data;
-        } BKSystemEvent;
+        } PortSystemEvent;
     };
 };
 
