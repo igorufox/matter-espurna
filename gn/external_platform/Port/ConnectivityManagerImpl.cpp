@@ -78,44 +78,8 @@ CHIP_ERROR ConnectivityManagerImpl::_Init()
     mFlags.SetRaw(0);
 
     memset(&mWifiNetconf, 0x0, sizeof(mWifiNetconf));
-    // If there is no persistent station provision...
-    if (!IsWiFiStationProvisioned())
-    {
-        // If the code has been compiled with a default WiFi station provision, configure that now.
-#if !defined(CONFIG_DEFAULT_WIFI_SSID)
-        printf("%s %d pls define CONFIG_DEFAULT_WIFI_SSID\r\n", __func__, __LINE__);
-#else
-        if (CONFIG_DEFAULT_WIFI_SSID[0] != 0)
-        {
-            ChipLogProgress(DeviceLayer, "Setting default WiFi station configuration (SSID: %s)", CONFIG_DEFAULT_WIFI_SSID);
-
-            // Set a default station configuration.
-            rtw_wifi_setting_t wifiConfig;
-
-            // Set the wifi configuration
-            memset(&wifiConfig, 0, sizeof(wifiConfig));
-            memcpy(wifiConfig.ssid, CONFIG_DEFAULT_WIFI_SSID, strlen(CONFIG_DEFAULT_WIFI_SSID) + 1);
-            memcpy(wifiConfig.password, CONFIG_DEFAULT_WIFI_PASSWORD, strlen(CONFIG_DEFAULT_WIFI_PASSWORD) + 1);
-            wifiConfig.mode = RTW_MODE_STA;
-
-            // Configure the WiFi interface.
-            int err = CHIP_SetWiFiConfig(&wifiConfig);
-            if (err != 0)
-            {
-                ChipLogError(DeviceLayer, "_Init _SetWiFiConfig() failed: %d", err);
-            }
-
-            // Enable WiFi station mode.
-            ReturnErrorOnFailure(SetWiFiStationMode(kWiFiStationMode_Enabled));
-        }
-
-        // Otherwise, ensure WiFi station mode is disabled.
-        else
-        {
-            ReturnErrorOnFailure(SetWiFiStationMode(kWiFiStationMode_Disabled));
-        }
-#endif
-    }
+    // The station is the firmware's own (matter_port.h): no default network of the library, the station mode follows
+    // the firmware's events (matter_app.cpp sets it enabled)
 
     // Force AP mode off for now.
 
