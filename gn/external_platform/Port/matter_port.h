@@ -16,6 +16,8 @@ extern "C" {
 /* 0 ok, anything else an error */
 #define MATTER_PORT_OK 0
 #define MATTER_PORT_FAIL -1
+/* matter_port_kv_read(): the value is longer than the buffer - the buffer holds its first len bytes, out_len = len */
+#define MATTER_PORT_BUFFER_TOO_SMALL -2
 
 #define MATTER_PORT_LOG_ON_ERR(x)                                                                                         \
     do                                                                                                                    \

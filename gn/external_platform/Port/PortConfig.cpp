@@ -143,7 +143,7 @@ CHIP_ERROR PortConfig::ReadConfigValue(Key key, uint64_t & val)
 
 CHIP_ERROR PortConfig::ReadConfigValueStr(Key key, char * buf, size_t bufSize, size_t & outLen)
 {
-    uint32_t success    = 0;
+    int success         = 0;
     size_t out_length  = 0;
 
     success = matter_port_kv_read(key.Namespace, key.Name, buf, bufSize, &out_length);
@@ -157,6 +157,11 @@ CHIP_ERROR PortConfig::ReadConfigValueStr(Key key, char * buf, size_t bufSize, s
     {
         return CHIP_NO_ERROR;
     }
+    else if (MATTER_PORT_BUFFER_TOO_SMALL == success)
+    {
+        // the first bufSize bytes are in the buffer (outLen), the value is longer
+        return CHIP_ERROR_BUFFER_TOO_SMALL;
+    }
     else
     {
         outLen = 0;
@@ -166,7 +171,7 @@ CHIP_ERROR PortConfig::ReadConfigValueStr(Key key, char * buf, size_t bufSize, s
 
 CHIP_ERROR PortConfig::ReadConfigValueBin(Key key, uint8_t * buf, size_t bufSize, size_t & outLen)
 {
-    uint32_t success    = 0;
+    int success         = 0;
     size_t out_length  = 0;
 
     success = matter_port_kv_read(key.Namespace, key.Name, (char *) buf, bufSize, &out_length);
@@ -179,6 +184,11 @@ CHIP_ERROR PortConfig::ReadConfigValueBin(Key key, uint8_t * buf, size_t bufSize
     if (MATTER_PORT_OK == success)
     {
         return CHIP_NO_ERROR;
+    }
+    else if (MATTER_PORT_BUFFER_TOO_SMALL == success)
+    {
+        // the first bufSize bytes are in the buffer (outLen), the value is longer
+        return CHIP_ERROR_BUFFER_TOO_SMALL;
     }
     else
     {

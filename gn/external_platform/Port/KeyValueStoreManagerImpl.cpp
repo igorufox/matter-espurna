@@ -57,6 +57,11 @@ CHIP_ERROR KeyValueStoreManagerImpl::_Get(const char * key, void * value, size_t
     {
         err = CHIP_NO_ERROR;
     }
+    else if (ret == MATTER_PORT_BUFFER_TOO_SMALL)
+    {
+        // the KeyValueStoreManager contract: the first value_size bytes are in the buffer
+        err = CHIP_ERROR_BUFFER_TOO_SMALL;
+    }
     else
     {
         err = CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
